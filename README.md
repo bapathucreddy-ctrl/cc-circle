@@ -94,3 +94,4 @@ Validation: `npm run lint`, `npm run typecheck`, `npm test --prefix server`, and
 Community is the first navigation destination and signed-in landing page; Overview is second. The creator feed includes public text updates, persistent likes and comments, a Following filter, profile shortcuts, suggested creators, and open project briefs. A desktop three-column layout collapses to a single column on mobile. Portfolio spotlights are labelled and use existing creator work when the feed is empty.
 
 The welcome account section and sign-in/register page include a three-row looping craft photo gallery, with alternate scrolling directions, pause controls, hover/focus pause, and reduced-motion support.
+# cc-circle
