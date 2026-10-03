@@ -1,0 +1,9 @@
+{
+  "name": "cc-circle-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=24"},
+  "scripts": {"start":"node --env-file-if-exists=.env src/index.js","dev":"node --env-file-if-exists=.env --watch src/index.js","test":"node --test test/*.test.js"},
+  "dependencies": {"cors":"^2.8.5","express":"^5.1.0","helmet":"^8.1.0","multer":"^2.0.2"}
+}
