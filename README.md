@@ -429,4 +429,4 @@ Some older feature notes describe historical rollout stages. The current source 
 
 ---
 
-Operated by **CC Creative Labs** · [support@cclabs.space](mailto:support@cclabs.space)
+Operated by **CC Creative Labs** · [chetan.reddy@cclabs.space](mailto:chetan.reddy@cclabs.space)
