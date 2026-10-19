@@ -1,5 +1,7 @@
+import { AppFooter } from './AppFooter';
+import { KeyboardAwareScrollView as ScrollView } from './KeyboardAwareScrollView';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { bengaluru, errorText, type Coordinate } from '../domain';
 import { currentLocation } from '../lib/currentLocation';
@@ -91,6 +93,7 @@ export function LocationPicker({ center, label, onSelect, compact = false, foreg
       <Text style={[styles.muted, { fontSize: 11 }]}>Check the selected pin before booking.</Text>
       </>}
       </ScrollView>
+      <AppFooter />
     </SafeAreaView></KeyboardAvoidingView></Modal>
   </>;
 }

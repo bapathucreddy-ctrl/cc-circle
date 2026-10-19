@@ -1,3 +1,4 @@
+import { AppFooter } from './AppFooter';
 import { useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ export function LegalLinks({ account = false }: { account?: boolean }) {
           {selected !== 'terms' && <><Text style={styles.heading}>Provider privacy notices</Text>{providerPrivacyLinks.map(link => <Button key={link.title} secondary title={`${link.title} privacy notice ↗`} onPress={() => { void open(link.url); }} />)}</>}
           <Notice message={error} /><Button secondary title={`Contact ${legalContact}`} onPress={() => { void open(`mailto:${legalContact}`); }} /><Button title="Done" onPress={() => setSelected(null)} />
         </ScrollView>}
+        <AppFooter />
       </SafeAreaView>
     </Modal>
   </View>;

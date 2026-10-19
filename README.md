@@ -306,7 +306,7 @@ One active login is enforced **per app**: a newer Customer login replaces an old
 
 | Area | Behavior | Implementation |
 | --- | --- | --- |
-| Startup | Original Circle ring-tracing branded splash | Shared animated splash with startup deadline |
+| Startup | Circle single-C-and-dot tracing splash | Shared animated splash with startup deadline |
 | Loading | Five craft illustrations bounce, scale and fade in sequence | `ServiceLoader`, React Native Animated |
 | Appearance | Sun/moon theme control | Shared light/dark theme UI |
 | Discovery and journey | Moving craft-head rider markers and follow camera | Mapbox and location interpolation |
@@ -364,6 +364,12 @@ Mapbox and Cashfree require native modules; Expo Go is not a substitute for the 
 
 Do not commit `.env`, service-account JSON, private signing keys, keystores or account tokens. Example environment files contain placeholders and public configuration identifiers only.
 
+## APK size and compatibility
+
+Photo assets are resized for their display requirements and encoded as high-quality JPEG; transparent rider and craft artwork stays PNG at practical display resolutions. Release builds enable R8 code shrinking and resource shrinking, preserve Metro image references, and retain both `armeabi-v7a` and `arm64-v8a` phone support. The launcher, app header, notification icon and animated splash use one C and one dot.
+
+App pages include copyright credit to The Vivaha Stories and creation credit to C C Creative Labs. Keyboard-aware forms scroll focused fields into the usable viewport.
+
 ## Build variants
 
 ```powershell
@@ -381,14 +387,14 @@ Local native Android builds that share generated dependency output must run sequ
 
 ## Validation and release status
 
-Latest recorded validation: **19 October 2026**. See [release validation record](artifacts/previews/dashboard-request-validation.json).
+Latest recorded validation: **19 October 2026**. See [optimized release validation](artifacts/previews/optimized-release-validation.json).
 
 | Check | Recorded result |
 | --- | --- |
-| Mobile regression suite | 134 passing tests |
+| Mobile regression suite | 139 passing tests |
 | TypeScript | Passed |
-| Android Customer | 0.1.9, version code 10; signed standalone APK verified |
-| Android Professional | 0.1.14, version code 15; signed standalone APK verified |
+| Android Customer | 0.1.10, version code 11; 82.96 MB signed standalone APK verified |
+| Android Professional | 0.1.15, version code 16; 82.96 MB signed standalone APK verified |
 | Embedded variant configuration | Verified separately for both APKs |
 | Native modules and 16 KB alignment | Verified in release artifacts |
 | iOS JavaScript exports | Both variants passed |

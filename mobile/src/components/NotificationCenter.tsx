@@ -1,3 +1,4 @@
+import { AppFooter } from './AppFooter';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, Modal, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -89,6 +90,7 @@ export function NotificationCenter({ userId, children, onNavigate }: { userId: s
             {settings && (['push_enabled', 'messages_enabled', 'events_enabled'] as const).map(key => <View key={key} style={styles.between}><Text style={styles.text}>{({ push_enabled: 'Phone notifications', messages_enabled: 'Booking messages', events_enabled: 'Event opportunities & applications' })[key]}</Text><Switch accessibilityLabel={key} value={settings[key]} disabled={busy} onValueChange={value => { if (key === 'push_enabled' && value) void enableDevice(); else void changeSetting(key, value); }} trackColor={{ false: colors.line, true: colors.text }} thumbColor={colors.panel} /></View>)}
           </View>
         </ScrollView>
+        <AppFooter />
       </SafeAreaView>
     </Modal>
   </InboxContext.Provider>;

@@ -1,3 +1,4 @@
+import { AppFooter } from './src/components/AppFooter';
 import { ServiceLoader as ActivityIndicator } from './src/components/ServiceLoader';
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AppState, BackHandler, KeyboardAvoidingView, Linking, Platform, Pressable, StatusBar, Text, View } from 'react-native';
@@ -163,6 +164,7 @@ function Application() {
         <Text style={styles.text}>The app is awaiting its service configuration.</Text><Text style={styles.muted}>Connect the Supabase project and Mapbox token, then rebuild the development app.</Text></View>
         : loading ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator color={colors.accent} /></View>
         : session ? <SessionGate key={session.user.id + ':' + appSessionId(session.access_token)} onReplaced={() => { void sessionReplaced(appSessionId(session.access_token)); }}><NotificationCenter key={session.user.id} userId={session.user.id} onNavigate={setNotificationTarget}><RegistrationGate userId={session.user.id}>{isProfessionalApp ? <ProfessionalWorkspace userId={session.user.id} initialScreen={intent} notificationTarget={notificationTarget} /> : <Marketplace key={session.user.id} userId={session.user.id} notificationTarget={notificationTarget} onHomeChange={setHomeChrome} />}</RegistrationGate></NotificationCenter></SessionGate> : <><Notice message={error} /><Auth onIntent={setIntent} /></>}
+      <AppFooter />
     </KeyboardAvoidingView></AppErrorBoundary>
     {splashVisible && <LaunchSplash ready={layoutReady} onFinish={finishSplash} />}
   </SafeAreaView><HomeSafeAreaColor active={homeChrome && Boolean(session) && !splashVisible} /></SafeAreaProvider>;

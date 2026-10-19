@@ -1,8 +1,9 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { ServiceCraftIcon } from '../components/ServiceCraftIcon';
 import { visibleCategories } from '../lib/serviceCatalog';
 import { useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { bengaluru, categories, categoryLabels, errorText, money, type Booking, type Category, type Coordinate, type Professional } from '../domain';
 import { useForegroundRefresh, useResource } from '../hooks';
 import { Button, Card, Field, Icon, IconButton, Notice, Segmented, TextButton, useTheme } from '../ui';

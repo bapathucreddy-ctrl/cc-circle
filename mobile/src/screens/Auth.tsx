@@ -1,5 +1,6 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 ﻿import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { signInWithGoogle } from '../lib/googleAuth';
 import { errorText } from '../domain';

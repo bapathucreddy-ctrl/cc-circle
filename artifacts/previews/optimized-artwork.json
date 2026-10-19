@@ -1,0 +1,352 @@
+[
+  {
+    "file": "mobile/assets/campaigns/diwali.jpg",
+    "originalBytes": 1959486,
+    "bytes": 259847,
+    "width": 1536,
+    "height": 864
+  },
+  {
+    "file": "mobile/assets/campaigns/navratri-seasonal-hero.jpg",
+    "originalBytes": 2915594,
+    "bytes": 730623,
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/campaigns/navratri.jpg",
+    "originalBytes": 2194732,
+    "bytes": 323261,
+    "width": 1536,
+    "height": 864
+  },
+  {
+    "file": "mobile/assets/campaigns/wedding.jpg",
+    "originalBytes": 2051583,
+    "bytes": 252812,
+    "width": 1536,
+    "height": 864
+  },
+  {
+    "file": "mobile/assets/services/brand-content.jpg",
+    "originalBytes": 2126896,
+    "bytes": 174916,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/bridal-hair.jpg",
+    "originalBytes": 2255122,
+    "bytes": 206304,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/bridal-makeup.jpg",
+    "originalBytes": 2547479,
+    "bytes": 254189,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/event-photography.jpg",
+    "originalBytes": 2009847,
+    "bytes": 181210,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/event-reels.jpg",
+    "originalBytes": 2274344,
+    "bytes": 220122,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/festive-makeup.jpg",
+    "originalBytes": 2356098,
+    "bytes": 231812,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/general-hair.jpg",
+    "originalBytes": 2181211,
+    "bytes": 183326,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/general-makeup.jpg",
+    "originalBytes": 2145013,
+    "bytes": 160902,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/groom-makeup.jpg",
+    "originalBytes": 2490662,
+    "bytes": 225336,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/groom-styling.jpg",
+    "originalBytes": 2382716,
+    "bytes": 219484,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/haircut.jpg",
+    "originalBytes": 2119794,
+    "bytes": 168652,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/party-hair.jpg",
+    "originalBytes": 2301694,
+    "bytes": 205930,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/party-makeup.jpg",
+    "originalBytes": 2387955,
+    "bytes": 209398,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/photo-editing.jpg",
+    "originalBytes": 2068175,
+    "bytes": 189656,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/portrait-photography.jpg",
+    "originalBytes": 2018309,
+    "bytes": 150011,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/prewedding-photography.jpg",
+    "originalBytes": 2469221,
+    "bytes": 236303,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/product-photography.jpg",
+    "originalBytes": 1866584,
+    "bytes": 151251,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/product-reels.jpg",
+    "originalBytes": 1817886,
+    "bytes": 132274,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/reel-editing.jpg",
+    "originalBytes": 1930956,
+    "bytes": 185557,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/social-content.jpg",
+    "originalBytes": 2423449,
+    "bytes": 237346,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/video-editing.jpg",
+    "originalBytes": 2081671,
+    "bytes": 209507,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/wedding-film-editing.jpg",
+    "originalBytes": 2199069,
+    "bytes": 226630,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/wedding-makeup.jpg",
+    "originalBytes": 2254530,
+    "bytes": 194566,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/services/wedding-photography.jpg",
+    "originalBytes": 2289188,
+    "bytes": 223407,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "file": "mobile/assets/welcome/actor.jpg",
+    "originalBytes": 2138835,
+    "bytes": 132460,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/welcome/contentcreator.jpg",
+    "originalBytes": 2184434,
+    "bytes": 148420,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/welcome/dancer.jpg",
+    "originalBytes": 2136380,
+    "bytes": 142539,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/welcome/editor.jpg",
+    "originalBytes": 1993189,
+    "bytes": 135751,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/welcome/hairstylist.jpg",
+    "originalBytes": 2182356,
+    "bytes": 138659,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/welcome/makeup.jpg",
+    "originalBytes": 2456440,
+    "bytes": 168743,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/welcome/photographer.jpg",
+    "originalBytes": 2018237,
+    "bytes": 136049,
+    "width": 1024,
+    "height": 683
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-actor.png",
+    "originalBytes": 1479586,
+    "bytes": 128307,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-contentcreator.png",
+    "originalBytes": 1457602,
+    "bytes": 122187,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-dancer.png",
+    "originalBytes": 1465185,
+    "bytes": 122808,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-editor.png",
+    "originalBytes": 1573447,
+    "bytes": 136807,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-generic.png",
+    "originalBytes": 1438397,
+    "bytes": 122437,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-hairstylist.png",
+    "originalBytes": 1534595,
+    "bytes": 129885,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-makeup.png",
+    "originalBytes": 1462344,
+    "bytes": 126655,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/rider-3d-photographer.png",
+    "originalBytes": 1503394,
+    "bytes": 128534,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/brand/tracking-scooter-3d-makeup-preview.png",
+    "originalBytes": 1462344,
+    "bytes": 126655,
+    "width": 341,
+    "height": 512
+  },
+  {
+    "file": "mobile/assets/crafts/realistic-contentcreator.png",
+    "originalBytes": 687281,
+    "bytes": 77963,
+    "width": 384,
+    "height": 384
+  },
+  {
+    "file": "mobile/assets/crafts/realistic-editor.png",
+    "originalBytes": 1565575,
+    "bytes": 156702,
+    "width": 384,
+    "height": 384
+  },
+  {
+    "file": "mobile/assets/crafts/realistic-hairstylist.png",
+    "originalBytes": 1279376,
+    "bytes": 119132,
+    "width": 384,
+    "height": 384
+  },
+  {
+    "file": "mobile/assets/crafts/realistic-makeup.png",
+    "originalBytes": 1206307,
+    "bytes": 155164,
+    "width": 384,
+    "height": 384
+  },
+  {
+    "file": "mobile/assets/crafts/realistic-photographer.png",
+    "originalBytes": 1816607,
+    "bytes": 177427,
+    "width": 384,
+    "height": 384
+  },
+  {
+    "file": "mobile/assets/crafts/realistic-team.png",
+    "originalBytes": 1879619,
+    "bytes": 193525,
+    "width": 384,
+    "height": 384
+  }
+]

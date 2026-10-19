@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { FeePresets } from '../components/FeePresets';
 import { ProfessionalDetails } from '../components/ProfessionalDetails';
@@ -7,7 +8,7 @@ import { ProfessionalServices, ProfessionalServiceSummary, ServiceTypePicker } f
 import { services as loadServices } from '../lib/api';
 import { visibleCategories, servicesForCategory } from '../lib/serviceCatalog';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View } from 'react-native';
 import DateTimePicker from '../components/DateTimePicker';
 import { categories, categoryLabels, errorText, money, type Category, type Coordinate, type Professional } from '../domain';
 import { questionnaires } from '../questionnaires';
@@ -133,7 +134,7 @@ export function Join({ userId, center, onDone }: { userId: string; center: Coord
     return { profile, privateData, service: packages?.[0], draft: draft?.draft, professionalName: registration.professional_name };
   }, userId);
   const [loaded, setLoaded] = useState(false);
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<import('react-native').ScrollView>(null);
   useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [section]);
   // Hydrate once; edits are never overwritten by later refreshes.
   useEffect(() => { if (existing.data && !loaded) {

@@ -50,8 +50,8 @@ test('professional persisted location jobs declare the Android boot permission',
   const pro=config('professional'),customer=config('customer');
   assert.ok(pro.android.permissions.includes('RECEIVE_BOOT_COMPLETED'));
   assert.ok(!customer.android.permissions.includes('RECEIVE_BOOT_COMPLETED'));
-  assert.equal(pro.version,'0.1.14');assert.equal(pro.android.versionCode,15);
-  assert.equal(customer.version,'0.1.9');assert.equal(customer.android.versionCode,10);
+  assert.equal(pro.version,'0.1.15');assert.equal(pro.android.versionCode,16);
+  assert.equal(customer.version,'0.1.10');assert.equal(customer.android.versionCode,11);
 });
 
 test('Firebase configuration is optional and remains separate between app variants',()=>{

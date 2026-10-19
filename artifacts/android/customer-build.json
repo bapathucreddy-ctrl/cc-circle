@@ -4,8 +4,8 @@
   "bootCompletedPermission": true,
   "nativeTaskManager": true,
   "package": "com.cccircle.customer",
-  "version": "0.1.9",
-  "versionCode": 10,
+  "version": "0.1.10",
+  "versionCode": 11,
   "policiesIncluded": true,
   "physicalDeviceTested": false,
   "minSdk": "24",
@@ -22,8 +22,8 @@
   "signatureVerified": true,
   "aligned16KB": true,
   "certificateSha256": "e06c461eb7d0ff13a24760c7257d7b7142b3ed087dce9ede0b51589a7ea79824",
-  "bytes": 169263795,
-  "sha256": "f6e2d42c38ae8438450814f6e6835da50ad277ca7fc39d9fdefbde880243a0df",
+  "bytes": 82957137,
+  "sha256": "8b714f5e69b3f4736fa80edf72705e0a90d3b209b0c464dad8532eccdd40c579",
   "file": "Circle-Customer.apk",
   "craftHeadRiders": 7,
   "generic3DRider": true,
@@ -37,62 +37,62 @@
     {
       "craft": "makeup",
       "file": "res/es.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "actor",
       "file": "res/Ke.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "photographer",
-      "file": "res/Uz1.png",
-      "width": 1024,
-      "height": 1536,
+      "file": "res/Uz.png",
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "editor",
       "file": "res/bS.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "dancer",
       "file": "res/YA.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "hairstylist",
       "file": "res/Z6.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "contentcreator",
       "file": "res/LK.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     },
     {
       "craft": "generic",
       "file": "res/io.png",
-      "width": 1024,
-      "height": 1536,
+      "width": 341,
+      "height": 512,
       "alpha": true
     }
   ],
   "appName": "Circle",
-  "originalLogoPreserved": true,
+  "singleCAndDotLogo": true,
   "animatedSplash": true,
   "nativeLaunchLogoRemoved": true,
   "transparentLaunchResources": 10,
@@ -100,9 +100,9 @@
   "notificationInbox": false,
   "pushConfigured": true,
   "pushStatus": "configured_device_delivery_unverified",
-  "mobileTestsPassed": 134,
+  "mobileTestsPassed": 139,
   "databaseTestsPassed": 26,
-  "versionedFile": "Circle-Customer-0.1.9.apk",
+  "versionedFile": "Circle-Customer-0.1.10.apk",
   "latestUiVerifiedInBundle": true,
   "circleTopPicks": true,
   "earningsAnalytics": {
@@ -122,5 +122,15 @@
   "fiveCraftLoadingAnimation": true,
   "reducedMotionSupported": true,
   "iosJavaScriptExportPassed": true,
-  "deviceCopyVerified": false
+  "deviceCopyVerified": false,
+  "optimizedSizeVerified": true,
+  "sizeMB": 82.96,
+  "retains32BitAnd64BitPhones": true,
+  "codeShrinking": true,
+  "resourceShrinking": true,
+  "nativeLauncherLogoVerified": true,
+  "nativeNotificationLogoVerified": true,
+  "footerCreditsIncluded": true,
+  "keyboardAwareFormsIncluded": true,
+  "sourceBundleMatchesAPK": true
 }

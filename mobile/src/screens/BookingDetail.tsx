@@ -1,6 +1,7 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { AppState, RefreshControl, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { categoryLabels, errorText, money, type Booking, type Coordinate, type TrackingLocation } from '../domain';
 import { Button, Card, Field, Icon, Notice, Segmented, useTheme } from '../ui';

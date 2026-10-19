@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { CirclePicks } from '../components/CirclePicks';
 import { serviceImages } from '../lib/servicePresentation';
@@ -10,7 +11,7 @@ import { ProfessionalAvatar } from '../components/ProfessionalAvatar';
 import { visibleCategories, serviceCatalog } from '../lib/serviceCatalog';
 import { OccasionBanners } from '../components/OccasionBanners';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, Pressable, RefreshControl, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { createRequestId } from '../lib/requestId';
 import DateTimePicker from '../components/DateTimePicker';
 import { bookingFees, categories, categoryLabels, errorText, money, type Booking, type Category, type Coordinate, type Professional, type Service } from '../domain';
