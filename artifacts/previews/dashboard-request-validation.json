@@ -1,0 +1,67 @@
+{
+  "validatedOn": "2026-10-19",
+  "circleTopPicks": true,
+  "homeMessageAboveAvailability": true,
+  "reducedSpaceAboveHomeMessage": true,
+  "professionalHomeAndPayoutAnalytics": {
+    "dailyDefault": true,
+    "filters": [
+      "1D",
+      "5D",
+      "1M",
+      "1Y"
+    ],
+    "greenChart": true,
+    "data": "Completed, paid service net earnings; service end date with legacy service-date fallback"
+  },
+  "requestTeamPicker": {
+    "inlineQuantityControls": true,
+    "multiplePeoplePerCraft": true,
+    "maxPerCraft": 20,
+    "minusToZeroRemovesRole": true
+  },
+  "loadingAnimation": {
+    "activeCrafts": [
+      "Makeup",
+      "Photographer",
+      "Editor",
+      "HairStylist",
+      "ContentCreator"
+    ],
+    "reducedMotionRespected": true,
+    "stopsOnUnmount": true
+  },
+  "typescriptPassed": true,
+  "mobileTestsPassed": 134,
+  "iosJavaScriptExportsPassed": [
+    "customer",
+    "professional"
+  ],
+  "nativeBuildsSignedAndVerified": true,
+  "nativeModulesAnd16KBAlignmentVerified": true,
+  "customerConfigurationRebuiltInIsolation": true,
+  "buildConcurrencyGuardAdded": true,
+  "physicalDeviceTested": false,
+  "apks": [
+    {
+      "variant": "customer",
+      "version": "0.1.9",
+      "versionCode": 10,
+      "file": "artifacts/android/Circle-Customer-0.1.9.apk",
+      "sha256": "f6e2d42c38ae8438450814f6e6835da50ad277ca7fc39d9fdefbde880243a0df",
+      "bytes": 169263795
+    },
+    {
+      "variant": "professional",
+      "version": "0.1.14",
+      "versionCode": 15,
+      "file": "artifacts/android/Circle-Professional-0.1.14.apk",
+      "sha256": "73211743680cce591dd751d553b01c7b6069e7638fdf95107c54545dda8870b5",
+      "bytes": 169263179
+    }
+  ],
+  "previews": [
+    "artifacts/previews/home-release-overview.png",
+    "artifacts/previews/dashboards-and-request.png"
+  ]
+}

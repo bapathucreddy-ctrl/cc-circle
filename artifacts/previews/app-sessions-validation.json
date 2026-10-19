@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-18T09:23:19.795Z",
+  "scope": "one active login per account per app",
+  "migration": "202610180002",
+  "backendDeployed": true,
+  "guardedEndpoints": [
+    "cashfree-order",
+    "cashfree-verify",
+    "cashfree-beneficiary",
+    "portfolio",
+    "location-search"
+  ],
+  "foregroundPollingMs": 5000,
+  "checksOnResume": true,
+  "oldSessionRpcAndRlsBlocked": true,
+  "oldPushDevicesRemoved": true,
+  "oldProfessionalGpsStopped": true,
+  "customerAndProfessionalIndependent": true,
+  "restoredOldSessionCannotTakeOver": true,
+  "signOutScope": "local",
+  "mobileTestsPassed": 99,
+  "backendFullSuitePassedBeforeAdditionalGpsTest": 24,
+  "targetedSessionAndDeploymentTestsPassed": 11,
+  "typeScriptPassed": true,
+  "realAccountTakeoverTested": false,
+  "androidApksRebuilt": false,
+  "iosArchivesRebuilt": false,
+  "requiresAppUpdates": true,
+  "requestTimeoutMs": 8000,
+  "iOSExportsValidated": true,
+  "databaseVerificationPassed": true,
+  "authOwnedRoutinesModified": false
+}

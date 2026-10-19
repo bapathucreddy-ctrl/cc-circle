@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-18T17:03:23.245Z",
+  "features": [
+    "Shared social-style customer and professional profile headers",
+    "Private reviewed profile photo upload",
+    "Three-column work grids",
+    "Full-distribution ratings and verified-booking comments",
+    "Five visible crafts with typed service selection before nearby discovery",
+    "Owner-managed session services and session pricing",
+    "Date-window home campaigns",
+    "Profile header power-button logout"
+  ],
+  "backendMigration": "202610180003",
+  "hostedMigrationVerified": true,
+  "deployedFunctions": [
+    "portfolio"
+  ],
+  "typecheckPassed": true,
+  "mobileTestsPassed": 114,
+  "backendTestsPassed": 26,
+  "iosCustomerJavaScriptExportPassed": true,
+  "iosProfessionalJavaScriptExportPassed": true,
+  "nativeRuntimeTested": false,
+  "apksRebuilt": true,
+  "previewUsesSampleData": true,
+  "festivalDateSource": "https://www.indiapost.gov.in/holidays-list",
+  "futureLunarFestivalDatesRequireCampaignConfiguration": true,
+  "historicalBookingsPreserved": true,
+  "androidReleases": {
+    "customer": "0.1.7",
+    "professional": "0.1.12"
+  },
+  "apkPackagesVerified": true
+}

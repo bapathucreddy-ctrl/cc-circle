@@ -1,0 +1,126 @@
+{
+  "variant": "professional",
+  "backgroundLocation": true,
+  "bootCompletedPermission": true,
+  "nativeTaskManager": true,
+  "package": "com.cccircle.professional",
+  "version": "0.1.14",
+  "versionCode": 15,
+  "policiesIncluded": true,
+  "physicalDeviceTested": false,
+  "minSdk": "24",
+  "architectures": [
+    "arm64-v8a",
+    "armeabi-v7a"
+  ],
+  "developmentClient": false,
+  "debuggable": false,
+  "embeddedAppBundle": true,
+  "embeddedVariant": "professional",
+  "nativeMapbox": true,
+  "nativeCashfree": true,
+  "signatureVerified": true,
+  "aligned16KB": true,
+  "certificateSha256": "04125e1a6805a7ae446fecf18aab6b760041a08aa00208bdceadcfdaa74fb22d",
+  "bytes": 169263179,
+  "sha256": "73211743680cce591dd751d553b01c7b6069e7638fdf95107c54545dda8870b5",
+  "file": "Circle-Professional.apk",
+  "craftHeadRiders": 7,
+  "generic3DRider": true,
+  "closeupNavigation": {
+    "zoom": 20.4,
+    "pitch": 70,
+    "uprightRearView": true,
+    "integratedCraftHead": true
+  },
+  "craftAssetsVerified": [
+    {
+      "craft": "makeup",
+      "file": "res/es.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "actor",
+      "file": "res/Ke.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "photographer",
+      "file": "res/Uz1.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "editor",
+      "file": "res/bS.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "dancer",
+      "file": "res/YA.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "hairstylist",
+      "file": "res/Z6.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "contentcreator",
+      "file": "res/LK.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    },
+    {
+      "craft": "generic",
+      "file": "res/io.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true
+    }
+  ],
+  "appName": "Circle",
+  "originalLogoPreserved": true,
+  "animatedSplash": true,
+  "nativeLaunchLogoRemoved": true,
+  "transparentLaunchResources": 10,
+  "nativeNotifications": true,
+  "notificationInbox": false,
+  "pushConfigured": true,
+  "pushStatus": "configured_device_delivery_unverified",
+  "mobileTestsPassed": 134,
+  "databaseTestsPassed": 26,
+  "versionedFile": "Circle-Professional-0.1.14.apk",
+  "latestUiVerifiedInBundle": true,
+  "circleTopPicks": true,
+  "earningsAnalytics": {
+    "daily": true,
+    "ranges": [
+      "1D",
+      "5D",
+      "1M",
+      "1Y"
+    ],
+    "completedPaidServicesOnly": true,
+    "greenChart": true
+  },
+  "requestCraftQuantityCards": true,
+  "multiplePeoplePerCraft": true,
+  "quantityControlsInsideCards": true,
+  "fiveCraftLoadingAnimation": true,
+  "reducedMotionSupported": true,
+  "iosJavaScriptExportPassed": true,
+  "deviceCopyVerified": false
+}

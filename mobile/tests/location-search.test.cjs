@@ -1,0 +1,29 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+function load(file,require,extras={}){const exports={};const js=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(js,{exports,require,URL,URLSearchParams,AbortSignal,...extras});return exports;}
+function client(invoke){return load(require.resolve('../src/lib/locationSearch.ts'),()=>({supabase:{functions:{invoke}}}));}
+class HttpError extends Error{constructor(status,message){super(message);this.status=status;}}
+function provider(fetch){return load(require.resolve('../../supabase/functions/_shared/googleMaps.ts'),()=>({HttpError}),{fetch});}
+const session='550e8400-e29b-41d4-a716-446655440000';
+test('Google suggestions and place coordinates share the authenticated search session and abort signal',async()=>{
+ const requests=[];const signal=new AbortController().signal;const api=client(async(name,options)=>{requests.push({name,...options});return {data:options.body.action==='suggest'?{locations:[{id:'ChIJ123',name:'Hotel',address:'Hotel, Bengaluru'}]}:{point:[77.64,12.97]}};});
+ const results=await api.searchLocations('Hotel',[77.59,12.97],session,signal);const point=await api.resolveLocation(results[0],session,signal);assert.equal(point[0],77.64);assert.equal(point[1],12.97);assert.equal(requests.length,2);for(const req of requests){assert.equal(req.name,'location-search');assert.equal(req.body.sessionToken,session);assert.equal(req.signal,signal);}assert.equal(requests[1].body.id,'ChIJ123');
+});
+test('short and oversized queries do not call providers; errors do not fall back to Mappls or Mapbox',async()=>{
+ let calls=0;const api=client(async()=>{calls++;return {error:{context:{json:async()=>({error:'Google Maps search is not configured yet.'})}}};});assert.equal((await api.searchLocations('Ba',[77,12],session)).length,0);await assert.rejects(()=>api.searchLocations('a'.repeat(257),[77,12],session),/256/);assert.equal(calls,0);await assert.rejects(()=>api.searchLocations('Bangalore',[77,12],session),/Google Maps search is not configured/);assert.equal(calls,1);
+});
+test('Google Autocomplete uses India, nearby bias and a field mask without exposing the server key',async()=>{
+ let req;const api=provider(async(url,options)=>{req={url,options};return {ok:true,json:async()=>({suggestions:[{placePrediction:{placeId:'ChIJ123',text:{text:'Hotel, Bengaluru'},structuredFormat:{mainText:{text:'Hotel'}}}},{queryPrediction:{text:{text:'Ignore'}}}]})};});const rows=await api.suggestPlaces('Hotel',[77.59,12.97],session,'server-secret');assert.equal(req.url,'https://places.googleapis.com/v1/places:autocomplete');const body=JSON.parse(req.options.body);assert.equal(body.sessionToken,session);assert.equal(body.includedRegionCodes[0],'in');assert.equal(body.locationBias.circle.center.latitude,12.97);assert.equal(body.locationBias.circle.center.longitude,77.59);assert.equal(req.options.headers['X-Goog-Api-Key'],'server-secret');assert.ok(req.options.headers['X-Goog-FieldMask'].includes('placeId'));assert.equal(rows.length,1);assert.equal(rows[0].id,'ChIJ123');assert.ok(!JSON.stringify(rows).includes('server-secret'));
+});
+test('Google Place Details requests coordinates for the selected place using the same session',async()=>{
+ let request;const api=provider(async(url,options)=>{request={url:new URL(url),options};return {ok:true,json:async()=>({id:'ChIJ123',location:{latitude:12.97,longitude:77.64}})};});const point=await api.resolvePlace('ChIJ123',session,'secret');assert.equal(point[0],77.64);assert.equal(request.url.searchParams.get('sessionToken'),session);assert.equal(request.options.headers['X-Goog-FieldMask'],'id,location');const invalid=provider(async()=>({ok:true,json:async()=>({id:'Other',location:{latitude:12,longitude:77}})}));await assert.rejects(()=>invalid.resolvePlace('ChIJ123',session,'secret'),e=>e.status===424);
+});
+test('invalid coordinates, invalid sessions and path injection never reach Google; provider errors are sanitized',async()=>{
+ let calls=0;const api=provider(async()=>{calls++;return {ok:false,status:403,json:async()=>({error:'secret'})};});await assert.rejects(()=>api.suggestPlaces('Hotel',[999,12],session,'secret'),e=>e.status===400);await assert.rejects(()=>api.suggestPlaces('Hotel',[77,12],'','secret'),e=>e.status===400);await assert.rejects(()=>api.resolvePlace('../evil',session,'secret'),e=>e.status===400);assert.equal(calls,0);await assert.rejects(()=>api.suggestPlaces('Hotel',[77,12],session,'secret'),e=>e.status===503&&!e.message.includes('secret'));assert.equal(calls,1);
+});
+test('Mapbox supplies routes, distance and maneuver guidance independently of Google Places',async()=>{
+ let request;const api=load(require.resolve('../src/lib/routes.ts'),()=>{throw Error('Routes must not call Supabase/Google');},{process:{env:{EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN:'pk.fixture'}},fetch:async(url,options)=>{request={url:new URL(url),options};return {ok:true,json:async()=>({routes:[{duration:123.5,distance:850,geometry:{coordinates:[[77.59,12.97],[77.6,12.98]]},legs:[{steps:[{distance:100,maneuver:{instruction:'Turn left',modifier:'left'}}]}]}]})};}});const signal=new AbortController().signal;const route=await api.drivingRoute([77.59,12.97],[77.6,12.98],signal);assert.equal(request.url.hostname,'api.mapbox.com');assert.equal(request.options.signal,signal);assert.equal(request.url.searchParams.get('steps'),'true');assert.equal(route.durationSeconds,123.5);assert.equal(route.distanceMeters,850);assert.equal(route.modifier,'left');assert.equal(route.coordinates[0][0],77.59);
+});
+test('invalid detail coordinates cannot become a booking pin',async()=>{
+ const api=client(async()=>({data:{point:[999,12]}}));await assert.rejects(()=>api.resolveLocation({id:'ChIJ123'},session),/entrance/);
+});

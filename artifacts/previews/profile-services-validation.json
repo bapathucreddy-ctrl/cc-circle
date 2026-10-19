@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-18T18:10:10.434Z",
+  "availableNowDefault": true,
+  "explicitScheduleSelectionPreserved": true,
+  "notificationHistoryVisible": false,
+  "notificationUnreadBadgeVisible": false,
+  "notificationHistoryPollingRemoved": true,
+  "pushRegistrationAndTapHandlingRetained": true,
+  "professionalProfileServiceFees": true,
+  "ownerPricesShowNetSessionEarnings": true,
+  "customerPricesShowCustomerSessionTotals": true,
+  "customerProfileReadsSavedPublicQuestionnaireAnswers": true,
+  "privateAndUnknownQuestionnaireFieldsExcluded": true,
+  "publicSummaryInitiallyShowsFourFacts": true,
+  "typecheckPassed": true,
+  "mobileTestsPassed": 119,
+  "cleanBellRegressionTestsPassed": 10,
+  "iosCustomerJavaScriptExportPassed": true,
+  "iosProfessionalJavaScriptExportPassed": true,
+  "nativeRuntimeTested": false,
+  "apksRebuilt": true,
+  "previewUsesSampleData": true,
+  "preview": "profile-services.png",
+  "apkPackagesVerified": true,
+  "androidReleases": {
+    "customer": "0.1.8",
+    "professional": "0.1.13"
+  },
+  "copiedToDeviceDownloads": true,
+  "deviceCopiesSha256Verified": true,
+  "apkVerifiedAt": "2026-10-18T18:21:03.650Z"
+}

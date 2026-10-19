@@ -1,0 +1,11 @@
+# Background booking navigation — 17 October 2026
+
+Professional 0.1.7 / Android version code 8 connects the existing background location task to active booking tracking. Customer stays on 0.1.2 / code 3.
+
+Previously the OS task updated only discovery GPS. Booking navigation had a separate screen-owned watcher that stopped on background/unmount. Always-location permission therefore kept discovery fresh while the customer's booking location stopped updating. On returning to navigation, an old local point also took precedence over newer server data.
+
+Each accepted background fix now queries only the signed-in professional's active journey (`en_route` or `arrived`, service not started), then calls the existing authenticated `share_booking_location` RPC. This works without mounting the booking screen. The server still checks ownership and journey eligibility before writing; a race with starting/ending service cannot re-enable tracking. No schema or server deployment is needed. Existing consent, enabled preference, online/published profile, account, freshness and serialized-write gates remain. Going offline or signing out stops the task; the generation guard prevents an in-flight fix from starting a late booking write after a stop.
+
+The native service requests navigation accuracy, a five-second interval and no deliberate deferred batch interval. These are OS scheduling requests, not guaranteed exact update timing. Navigation now selects the newest valid server/local point for the current booking instead of permanently preferring the last foreground fix. The customer receives background updates through its existing booking-location subscription/polling. The app map itself renders again when foregrounded; background GPS publication continues independently while online and consented.
+
+TypeScript and all 67 mobile tests pass. New tests cover a background task updating a booking with no mounted screen, journey completion/service-start races, stopping during an in-flight write, selecting a fresh server position after returning, and rejecting previous-booking/invalid-timestamp points. Existing offline/sign-out/privacy tests remain. Actual movement during a locked-screen journey needs an active booking; a read-only aggregate check found no active journey during this release's build. No booking, payment or OTP action was performed for testing.

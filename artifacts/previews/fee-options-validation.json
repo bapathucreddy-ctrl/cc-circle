@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-18T18:36:16.365Z",
+  "feePresets": 12,
+  "customAmountEntryRetained": true,
+  "displayedSessionDurationsRemoved": true,
+  "internalAvailabilityTimingRetained": true,
+  "customerPriceDetailsExpandable": true,
+  "bookingFeeInfoWebHover": true,
+  "bookingFeeInfoMobileTap": true,
+  "feeNotesUseActualCharge": true,
+  "newChargesAdded": false,
+  "paymentCalculationChanged": false,
+  "typecheckPassed": true,
+  "mobileTestsPassed": 122,
+  "iosCustomerJavaScriptExportPassed": true,
+  "iosProfessionalJavaScriptExportPassed": true,
+  "apksRebuilt": false,
+  "nativeRuntimeTested": false
+}

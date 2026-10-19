@@ -1,0 +1,12 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
+function load(file,mocks={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve(file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:name=>mocks[name]||{}});return exports;}
+test('hidden crafts retain their historical types but never appear in new category or service choices',()=>{
+ const domain=load('../src/domain.ts'),catalog=load('../src/lib/serviceCatalog.ts');assert.ok(domain.categories.includes('Actor'));assert.ok(domain.categories.includes('Dancer'));assert.ok(!catalog.visibleCategories.includes('Actor'));assert.ok(!catalog.visibleCategories.includes('Dancer'));assert.equal(catalog.visibleCategories.length,5);for(const category of catalog.visibleCategories)assert.ok(catalog.servicesForCategory(category).length>=4);
+ const migration=fs.readFileSync(require.resolve('../../supabase/migrations/202610180003_service_profiles_campaigns.sql'),'utf8');for(const item of catalog.serviceCatalog)assert.ok(migration.includes(`('${item.key}','${item.category}','${item.label}')`));
+});
+test('selected service discovery excludes other professionals and prices only the matching sessions',async()=>{
+ const domain=load('../src/domain.ts'),calls=[];const people=[{id:'a',booking_price_paise:1},{id:'b',booking_price_paise:2},{id:'c',booking_price_paise:3}];
+ const q={};for(const name of ['select','in','eq','order'])q[name]=(...args)=>{calls.push([name,...args]);return q;};q.range=async()=>({data:[{professional_id:'a',amount_paise:200000},{professional_id:'a',amount_paise:150000},{professional_id:'c',amount_paise:300000}],error:null});
+ const api=load('../src/lib/api.ts',{'./supabase':{supabase:{rpc:async()=>({data:people,error:null}),from:()=>q}},'../domain':domain,'../appVariant':{isProfessionalApp:false}});
+ const result=await api.discover('Makeup',[77,12],'',15,false,'bridal-makeup');assert.deepEqual(Array.from(result,r=>r.id),['a','c']);assert.equal(result[0].booking_price_paise,domain.bookingFees(150000).buyerTotal);assert.equal(result[1].booking_price_paise,domain.bookingFees(300000).buyerTotal);assert.equal(people[0].booking_price_paise,1);assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='service_key'&&c[2]==='bridal-makeup'));assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='active'&&c[2]===true));
+});

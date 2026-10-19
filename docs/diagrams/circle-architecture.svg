@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 590" role="img" aria-labelledby="title description">
+  <title id="title">Circle architecture: two apps, one shared backend</title>
+  <desc id="description">Customer and Professional apps connect through shared React Native components to Supabase authentication, database, realtime, storage and Edge Functions. External services provide maps, payment processing, media checks and push delivery. Moving markers illustrate requests, not live traffic.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#013832"/><stop offset="1" stop-color="#091b1a"/></linearGradient>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7" fill="none" stroke="#70a89d"/></marker>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif;fill:#f6fcfa}
+      .box{fill:#123c37;stroke:#48776e;stroke-width:1}
+      .external{fill:#102e2b;stroke:#3c5d56;stroke-width:1}
+      .line{fill:none;stroke:#70a89d;stroke-width:1.7;marker-end:url(#arrow)}
+      .label{font-size:16px;font-weight:700;text-anchor:middle}
+      .small{font-size:12px;fill:#b4d0c8;text-anchor:middle}
+      .dot{fill:#70e4b2}
+      @media(prefers-reduced-motion:reduce){.dot{display:none}}
+    </style>
+  </defs>
+  <rect width="1100" height="590" rx="24" fill="url(#bg)"/>
+  <text x="42" y="51" font-size="13" letter-spacing="3" fill="#b4d0c8">CIRCLE / SYSTEM OVERVIEW</text>
+  <text x="42" y="91" font-size="29" font-weight="700">Two apps. One connected service journey.</text>
+  <g>
+    <path id="customer" class="line" d="M268 190 H318 V259 H354"/>
+    <path id="professional" class="line" d="M268 329 H318 V289 H354"/>
+    <path id="backend" class="line" d="M554 274 H604"/>
+    <path class="line" d="M804 274 H838 V168 H870"/>
+    <path class="line" d="M804 274 H870"/>
+    <path class="line" d="M804 274 H838 V380 H870"/>
+    <path class="line" d="M704 354 V414"/>
+  </g>
+  <rect class="box" x="42" y="145" width="226" height="90" rx="15"/>
+  <text class="label" x="155" y="180">Customer</text>
+  <text class="small" x="155" y="204">Discover / book / pay / review</text>
+  <rect class="box" x="42" y="284" width="226" height="90" rx="15"/>
+  <text class="label" x="155" y="319">Professional</text>
+  <text class="small" x="155" y="343">Work / portfolio / earnings</text>
+  <rect class="box" x="354" y="214" width="200" height="120" rx="15"/>
+  <text class="label" x="454" y="250">Shared mobile core</text>
+  <text class="small" x="454" y="274">React Native / Expo</text>
+  <text class="small" x="454" y="298">Theme / cache / services</text>
+  <rect class="box" x="604" y="194" width="200" height="160" rx="15"/>
+  <text class="label" x="704" y="229">Supabase</text>
+  <text class="small" x="704" y="256">Auth / Postgres / RLS</text>
+  <text class="small" x="704" y="280">Realtime / Storage</text>
+  <text class="small" x="704" y="304">Edge Functions / RPCs</text>
+  <text class="small" x="704" y="328">Authoritative state transitions</text>
+  <rect class="external" x="870" y="130" width="190" height="76" rx="13"/>
+  <text class="label" x="965" y="160">Location</text>
+  <text class="small" x="965" y="183">Mapbox / Google Places</text>
+  <rect class="external" x="870" y="236" width="190" height="76" rx="13"/>
+  <text class="label" x="965" y="266">Payments</text>
+  <text class="small" x="965" y="289">Cashfree / refunds / payouts</text>
+  <rect class="external" x="870" y="342" width="190" height="76" rx="13"/>
+  <text class="label" x="965" y="372">Media</text>
+  <text class="small" x="965" y="395">Instagram / Cloud Vision</text>
+  <rect class="external" x="604" y="414" width="200" height="76" rx="13"/>
+  <text class="label" x="704" y="444">Device notifications</text>
+  <text class="small" x="704" y="467">FCM / APNs when configured</text>
+  <circle class="dot" r="4"><animateMotion dur="3.4s" repeatCount="indefinite" path="M268 190 H318 V259 H354"/></circle>
+  <circle class="dot" r="4"><animateMotion dur="3.4s" begin="1.1s" repeatCount="indefinite" path="M268 329 H318 V289 H354"/></circle>
+  <circle class="dot" r="4"><animateMotion dur="2.5s" repeatCount="indefinite" path="M554 274 H604"/></circle>
+  <circle class="dot" r="4"><animateMotion dur="3.6s" repeatCount="indefinite" path="M804 274 H870"/></circle>
+  <circle class="dot" r="4"><animateMotion dur="3.8s" begin=".5s" repeatCount="indefinite" path="M704 354 V414"/></circle>
+  <path d="M42 521 H1058" stroke="#31584f"/>
+  <text x="42" y="552" font-size="12" fill="#b4d0c8">ANDROID + iOS + WEB</text>
+  <text x="1058" y="552" font-size="12" fill="#b4d0c8" text-anchor="end">Illustrative request flow / motion respects reduced-motion preference</text>
+</svg>

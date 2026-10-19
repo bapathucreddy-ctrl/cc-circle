@@ -1,0 +1,23 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
+function portfolioModule(mockFetch=fetch){const exports={};const source=fs.readFileSync(require.resolve('../../supabase/functions/_shared/portfolio.ts'),'utf8');const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;class HttpError extends Error{constructor(status,message){super(message);this.status=status;}}
+vm.runInNewContext(js,{exports,require:()=>({HttpError}),Deno:{env:{get:name=>name==='PORTFOLIO_TOKEN_KEY'?Buffer.alloc(32,7).toString('base64'):undefined}},crypto:globalThis.crypto,TextEncoder,TextDecoder,Uint8Array,atob,btoa,AbortSignal,fetch:mockFetch});return exports;}
+test('Instagram flattens supported carousel media, caps at ten and drops identifying captions',()=>{const p=portfolioModule();const rows=[{id:'parent',media_type:'CAROUSEL_ALBUM',caption:'private_handle',username:'private_handle',children:{data:Array.from({length:15},(_,i)=>({id:String(i),media_type:i%2?'VIDEO':'IMAGE',media_url:`https://cdn.example.com/${i}`,thumbnail_url:`https://cdn.example.com/thumb-${i}`}))}}];const result=p.normalizeInstagram(rows);assert.equal(result.length,10);assert.equal(result[1].kind,'video');assert.ok(!JSON.stringify(result).includes('private_handle'));assert.equal(p.normalizeInstagram([{media_type:'IMAGE',media_url:'http://unsafe.example/a.jpg'}]).length,0);});
+test('YouTube imports only public embeddable videos without channel names or handles',()=>{const p=portfolioModule();const video={id:'dQw4w9WgXcQ',status:{privacyStatus:'public',embeddable:true},snippet:{channelTitle:'private_handle',title:'private_handle',thumbnails:{high:{url:'https://example.com/thumb.jpg'}}}};const output=p.normalizeYouTube([video,{...video,status:{privacyStatus:'private',embeddable:true}},{...video,status:{privacyStatus:'public',embeddable:false}}]);assert.equal(output.length,1);assert.equal(output[0].kind,'youtube');assert.ok(!JSON.stringify(output).includes('private_handle'));});
+test('provider tokens use authenticated encryption with a new nonce and fail if changed',async()=>{const p=portfolioModule();const a=await p.crypt('sensitive-provider-token');const b=await p.crypt('sensitive-provider-token');assert.notEqual(a,b);assert.ok(!a.includes('sensitive-provider-token'));assert.equal(await p.crypt(a,true),'sensitive-provider-token');const [iv,data]=a.split('.');const bytes=Buffer.from(data,'base64');bytes[0]^=1;await assert.rejects(()=>p.crypt(iv+'.'+bytes.toString('base64'),true));});
+
+test('provider errors identify the failing stage without leaking response messages or credentials',async()=>{
+ const p=portfolioModule(async()=>new Response(JSON.stringify({error:{code:190,error_subcode:463,message:'secret-token https://private.example/account'}}),{status:400}));
+ await assert.rejects(()=>p.providerJson('https://example.test/?access_token=secret-token',undefined,'Instagram media read'),error=>{assert.match(error.message,/Instagram media read failed \(HTTP 400, code 190, subcode 463\)/);assert.ok(!error.message.includes('secret-token'));assert.ok(!error.message.includes('private.example'));return true;});
+});
+test('provider errors handle malformed responses and reject error payloads even with HTTP 200',async()=>{
+ await assert.rejects(()=>portfolioModule(async()=>new Response('<html>secret</html>',{status:502})).providerJson('https://example.test',undefined,'Instagram code exchange'),/Instagram code exchange failed \(HTTP 502\)/);
+ await assert.rejects(()=>portfolioModule(async()=>new Response(JSON.stringify({error:{code:10,message:'private'}}))).providerJson('https://example.test'),/tester invitation/);
+});
+
+test('Instagram reads only the account authorized by the token, independent of exchanged account ID',async()=>{
+ const calls=[];
+ const p=portfolioModule(async(url,init)=>{calls.push({url,init});return new Response(JSON.stringify({data:[{id:'media',media_type:'IMAGE',media_url:'https://cdn.example.com/work.jpg'}]}));});
+ for(const id of ['rounded-oauth-id','different-scoped-id']){const result=await p.fetchMedia('instagram','test-only-token',id);assert.equal(result.length,1);}
+ assert.equal(calls.length,2);
+ for(const call of calls){const url=new URL(call.url);assert.equal(url.pathname,'/v25.0/me/media');assert.equal(url.searchParams.get('limit'),'10');assert.ok(url.searchParams.get('fields').includes('children{'));assert.equal(url.searchParams.has('access_token'),false);assert.equal(call.init.headers.Authorization,'Bearer test-only-token');}
+});

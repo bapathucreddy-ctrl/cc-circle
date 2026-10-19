@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-18T08:52:41.324Z",
+  "featuresImplemented": [
+    "Native APNs device registration using signed entitlement environment",
+    "APNs ES256 provider authorization and sandbox/production routing",
+    "Shared notification privacy, lease, retry and invalid-device handling",
+    "iPhone background location navigation options and permission guidance",
+    "iPhone date/time sheet with draft confirmation and cancellation"
+  ],
+  "sharedIosExports": [
+    "customer",
+    "professional"
+  ],
+  "mobileTestsPassed": 95,
+  "backendTestsPassed": 22,
+  "deploymentVerificationTestsPassed": 8,
+  "typeScriptPassed": true,
+  "migrationDeployed": "202610180001",
+  "notificationWorkerDeployed": true,
+  "workerUnauthenticatedStatus": 401,
+  "workerAuthenticatedStatus": 200,
+  "appleCredentialsConfigured": false,
+  "nativeIosProjectGenerated": false,
+  "nativeIosBuildTested": false,
+  "physicalIphoneTested": false,
+  "iosPushDeliveryTested": false,
+  "existingIosArchivesUpdated": false,
+  "androidApksRebuilt": false,
+  "remaining": [
+    "Apple signing and APNs key/team configuration",
+    "Enable IOS_PUSH_ENABLED only after APNs is configured",
+    "Build and test on iPhone or a compatible configured iOS Simulator",
+    "Exercise native payment, Google OAuth and moving/locked-screen GPS on iOS"
+  ]
+}

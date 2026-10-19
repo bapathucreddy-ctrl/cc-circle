@@ -1,0 +1,7 @@
+# Content creator welcome photo
+
+File: `contentcreator.png`. Created with the built-in imagegen tool for CC Circle's welcome/sign-in auto-scrolling gallery. Original fictional adult; never use as a professional's portfolio or identity. Category and scooter icons are separate code-drawn SVG/PNG assets extending the existing icon system.
+
+Final generation prompt:
+
+Create one photorealistic editorial lifestyle photograph for the CC Circle mobile app welcome screen, matching a warm natural creative-professional photo gallery. Use case: photorealistic-natural. Landscape 3:2 composition, no text, no watermark, no logos. An adult Indian content creator on a real behind-the-scenes reel shoot in a tasteful sunlit Bengaluru cafe: the creator is operating a vertically mounted smartphone on a compact handheld gimbal while filming a small tabletop food/product setup; visible focus and candid working posture, natural hands and realistic equipment. The person and unmistakable vertical phone/gimbal should both sit in the central crop so the work remains readable in a small horizontally scrolling card. Warm window light, muted neutral clothes, charcoal and cream interior, subtle film grain, believable skin texture, shallow depth of field, professional documentary photography, no overly posed influencer selfie, no laptop editing workstation. This is an original fictional person, not a real public figure. High quality polished photograph, single scene.
