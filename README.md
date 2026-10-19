@@ -1,97 +1,432 @@
-# CC Circle
+﻿# Circle
 
-An Expo app for iOS, Android and the web, with a Node/SQLite API. Film talent can link existing public portfolios; CC Circle discovers available image and video URLs from those pages; hiring teams can find people by craft and city, save profiles, send inquiries and publish briefs. A private reviewer queue supports manual profile and portfolio link checks.
+**Great talent. Close to you.**
+
+A marketplace for booking local creative professionals, with separate Customer and Professional apps sharing one Expo / React Native codebase and a Supabase backend.
+
+Makeup artists · Photographers · Video editors · Hair stylists · Content creators
+
+[Architecture](#architecture) · [Customer journey](#customer-journey) · [Professional journey](#professional-journey) · [Payments](#payments-and-payouts) · [Animations](#animations-and-interactions) · [Run locally](#run-locally) · [Validation](#validation-and-release-status)
+
+![Circle system architecture](docs/diagrams/circle-architecture.svg)
+
+The architecture visual includes moving request markers when opened in a browser. GitHub may display a static version; [open the SVG](docs/diagrams/circle-architecture.svg) locally for motion. The Mermaid diagrams below render directly on GitHub.
+
+## App preview
+
+| Customer home | Professional analytics and team requests |
+| --- | --- |
+| ![Seasonal customer home and Circle top picks](artifacts/previews/home-release-overview.png) | ![Earnings charts and inline profession quantity controls](artifacts/previews/dashboards-and-request.png) |
+
+Preview screenshots use sample presentation data. Live availability, prices, reviews and earnings come from application records.
+
+## What Circle includes
+
+| Customer app | Professional app |
+| --- | --- |
+| Seasonal hero, festive picks and Circle top picks | Work dashboard and incoming requests |
+| Service selection before nearby discovery | Online/offline availability control |
+| Available now by default, or scheduled bookings | Service selection and per-session fees |
+| Profiles with work grids, service cards and ratings | Profile photo, work samples and profile editing |
+| Booking, payment, journey tracking and service OTPs | Accept requests, navigate, verify arrival/completion |
+| Event teams with multiple people per craft | Earnings chart and payout history |
+| Paid active-booking chat and review submission | Instagram connection badge and portfolio moderation |
+
+Actor and dancer categories are hidden from the current service selection. Team requests support quantities of up to 20 per visible craft.
+
+## Architecture
+
+```mermaid
+flowchart TB
+    Customer[Customer app - Android / iOS / web]
+    Professional[Professional app - Android / iOS / web]
+    Shared[Shared React Native UI, theme, services and resource cache]
+    Auth[Supabase Auth - phone OTP / Google]
+    Data[Postgres - RLS, RPCs and migrations]
+    Realtime[Supabase Realtime]
+    Storage[Supabase Storage - portfolio and profile media]
+    Edge[Supabase Edge Functions]
+    Maps[Mapbox - maps, routes and navigation]
+    Places[Google Places - venue search]
+    Cashfree[Cashfree - checkout, refunds and payouts]
+    Meta[Instagram OAuth - account connection]
+    Vision[Cloud Vision - upload checks]
+    Push[FCM Android / APNs iOS]
+
+    Customer --> Shared
+    Professional --> Shared
+    Shared --> Auth
+    Shared --> Data
+    Shared <--> Realtime
+    Shared --> Storage
+    Shared --> Edge
+    Shared --> Maps
+    Edge --> Data
+    Edge --> Places
+    Edge --> Cashfree
+    Edge --> Meta
+    Edge --> Vision
+    Data --> Realtime
+    Edge --> Push
+    Push --> Customer
+    Push --> Professional
+```
+
+The two app variants have distinct package identifiers, callback schemes and build profiles. The backend validates bookings, payment transitions, availability and ownership. Client screens display server results; client-side controls do not establish payment success or permission to access another person's records.
+
+### Code map
+
+```text
+mobile/
+  App.tsx                  App startup, session and variant routing
+  app.config.ts            Android/iOS configuration and app identity
+  eas.json                 Role-specific development and release profiles
+  assets/                  Campaigns, craft artwork, icons and branding
+  src/components/          Shared profile, booking, chart and loading UI
+  src/screens/             Customer and Professional screens
+  src/lib/                 Supabase access, pricing, services and analytics
+  tests/                   Mobile behavior and regression tests
+supabase/
+  migrations/              30 ordered schema and access-control migrations
+  functions/               Payments, media, search and notification endpoints
+  tests/                   Database and deployment checks
+scripts/                   Deployment preparation and maintenance helpers
+docs/                      Feature setup, operational notes and diagrams
+artifacts/previews/        Review screenshots and validation records
+artifacts/android/         Release metadata; APK binaries are excluded from Git
+artifacts/ios/             Simulator metadata; archives are excluded from Git
+```
+
+### Edge Function responsibilities
+
+| Function | Responsibility |
+| --- | --- |
+| `cashfree-order` | Authenticate the payer and create checkout for the server price snapshot |
+| `cashfree-verify` | Recheck gateway payment state before recording payment |
+| `cashfree-webhook` | Validate signed gateway events and reconcile booking state |
+| `cashfree-beneficiary` | Register the professional's payout destination |
+| `cashfree-payouts` | Process eligible payout jobs |
+| `cashfree-refunds` | Process eligible refund jobs |
+| `location-search` | Search and resolve venues through the server provider key |
+| `portfolio` | Authorized account connection, media actions and upload checks |
+| `portfolio-callback` | Complete provider OAuth callbacks |
+| `notification-dispatch` | Dispatch eligible event notifications to registered devices |
+
+## Customer journey
+
+```mermaid
+flowchart LR
+    SignIn[Phone OTP or Google sign-in] --> Register[Complete account details once]
+    Register --> Home[Home - season and top picks]
+    Home --> Craft[Choose a profession]
+    Craft --> Service[Choose a service]
+    Service --> Timing{When?}
+    Timing -->|Default| Now[Available now]
+    Timing -->|Optional| Later[Choose a date and time]
+    Now --> Nearby[Nearby eligible professionals]
+    Later --> Nearby
+    Nearby --> Profile[Work grid, about, prices and reviews]
+    Profile --> Session[Select a service card]
+    Session --> Request[Confirm venue and request booking]
+    Request --> Accepted[Professional accepts]
+    Accepted --> Lifecycle[Payment and service lifecycle]
+    Lifecycle --> Review[Verified post-completion review]
+```
+
+Profiles show stable public usernames rather than professional legal names or phone numbers. The customer profile view places About above horizontal service cards, highlights the selected service and provides a rating distribution with a small review preview and View more.
+
+## Professional journey
+
+```mermaid
+flowchart LR
+    SignIn[Sign in] --> Details[Complete professional details]
+    Details --> Services[Choose offered services and session fees]
+    Services --> Portfolio[Upload profile photo and work samples]
+    Portfolio --> Connect[Optional Instagram connection]
+    Connect --> Online[Go online]
+    Online --> Requests[Review incoming requests]
+    Requests --> Accept[Accept a booking]
+    Accept --> Journey[Start journey when payment rules allow]
+    Journey --> Start[Verify customer start OTP]
+    Start --> Work[Provide service]
+    Work --> End[Verify customer completion OTP]
+    End --> Earnings[Earnings and eligible payout]
+```
+
+Connecting Instagram currently establishes control of a connected account and displays the Circle tick badge. It does not certify identity, skill, qualifications or ownership of every portfolio image. Work samples are uploaded separately; account connection is not a required media-import step.
+
+### Event team requests
+
+```mermaid
+flowchart LR
+    Event[Event details and venue] --> Crafts[Choose craft cards]
+    Crafts --> Count[Add or minus/plus count beside each craft]
+    Count --> Publish[Publish request]
+    Publish --> Apply[Professionals apply with a service]
+    Apply --> Review[Customer reviews applicants]
+    Review --> Confirm[Confirm selected professionals]
+    Confirm --> Bookings[Individual bookings with availability checks]
+```
+
+Each craft has its own quantity. Reducing a quantity to zero removes that craft; adding photographers does not replace makeup artists already selected.
+
+## Booking state and service verification
+
+```mermaid
+stateDiagram-v2
+    [*] --> Requested
+    Requested --> Accepted: Professional accepts
+    Requested --> Declined: Professional declines
+    Requested --> Cancelled: Customer cancels
+    Accepted --> Journey: Payment eligibility checked
+    Accepted --> Cancelled: Allowed cancellation
+    Journey --> ServiceActive: Start OTP verified
+    ServiceActive --> Completed: Completion OTP verified
+    Completed --> Reviewed: Customer submits rating
+    Declined --> [*]
+    Cancelled --> [*]
+    Reviewed --> [*]
+```
+
+These are product lifecycle stages; internal database fields also track payment, travel, verification and payout state separately. Paid active-booking chat closes on completion, cancellation or decline; stored active chat messages are removed. Booking and financial records remain separate.
+
+## Payments and payouts
+
+### Fixed-price session
+
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant App as Circle app
+    participant Server as Supabase / Edge Functions
+    participant Gateway as Cashfree Payments
+    participant P as Professional
+    participant Payout as Cashfree Payouts
+
+    C->>Server: Request booking with selected service
+    Server-->>C: Server-calculated price snapshot
+    P->>Server: Accept booking
+    C->>App: Pay accepted booking
+    App->>Server: Request checkout order
+    Server->>Gateway: Create order with authoritative amount
+    Gateway-->>App: Checkout result
+    Gateway->>Server: Signed payment webhook
+    App->>Server: Request payment verification
+    Server->>Gateway: Confirm payment status
+    Server-->>App: Verified payment state
+    P->>Server: Journey and start OTP verification
+    P->>Server: Completion OTP verification
+    Server->>Server: Queue eligible completed, paid booking
+    Server->>Payout: Submit payout through worker
+    Payout-->>Server: Transfer result
+    Server-->>P: Earnings and payout history
+```
+
+The customer pays the server-snapshotted total. The professional sees their agreed earnings. The booking/support fee is part of the customer total; its informational breakdown allocates 70% to platform fee and the rounded remainder to payment handling. This display allocation does not establish actual gateway costs, tax treatment or additional charges. The checkout total and professional entitlement remain unchanged.
+
+Payout eligibility requires verified payment and completed service. A completed service, a queued payout and a confirmed paid transfer are distinct events. Worker scheduling, gateway configuration and settlement behavior must be validated for the target environment.
+
+Wedding hourly bookings use a separate agreed-rate flow: start/end OTPs determine actual rounded-up hours, payment follows verified completion, and payout eligibility still requires confirmed payment. See [hourly billing](docs/wedding-hourly-billing.md).
+
+### Earnings dashboard
+
+```mermaid
+flowchart LR
+    Bookings[Completed bookings with verified payment] --> Net[Professional net earnings]
+    Net --> Period[Bucket by service end date]
+    Period --> Chart[Green earnings chart]
+    Transfers[Payout job history] --> Paid[Count only paid transfers as paid out]
+    Net --> Totals[Lifetime earned]
+    Paid --> Outstanding[Earned minus paid out, minimum zero]
+    Totals --> Outstanding
+```
+
+| Filter | Chart buckets |
+| --- | --- |
+| `1D` | 24 hourly buckets for today; default view |
+| `5D` | Five daily buckets |
+| `1M` | Thirty daily buckets |
+| `1Y` | Twelve monthly buckets |
+
+Legacy records without a service end date use their service date. Future records are excluded. Lifetime totals paginate records rather than silently stopping at the API row limit. Earnings, paid out, outstanding, processing and failed transfers remain distinguishable.
+
+## Location and navigation
+
+```mermaid
+flowchart LR
+    Permission[Device location permission] --> GPS[GPS updates]
+    GPS --> Online{Professional online?}
+    Online -->|Yes| Location[Recent professional location]
+    Online -->|Offline or signed out| Stop[Stop availability sharing]
+    Location --> Discovery[Eligible nearby discovery]
+    Location --> Tracking[Authorized booking tracking]
+    Tracking --> Route[Mapbox route and driving instructions]
+    Route --> Rider[3D craft-head scooter marker]
+```
+
+Mapbox handles maps, routes and navigation; Google Places handles typed venue search through an Edge Function. Discovery checks fresh, online, non-busy positions. Background sharing requires consent and native permissions; Android uses an ongoing location notification. Missing permissions, battery restrictions or force-stop can interrupt updates. See [live location](docs/live-professional-location.md) and [journey tracking](docs/background-journey-tracking.md).
+
+## Media and account connection
+
+```mermaid
+flowchart LR
+    Photo[Choose own work sample] --> Compress[Resize and compress on device]
+    Compress --> Limit[Validate upload size and portfolio limit]
+    Limit --> Check[Server image and watermark checks]
+    Check -->|Accepted| Store[Store approved portfolio item]
+    Check -->|Rejected| Explain[Show rejection reason]
+    Store --> Grid[Profile work grid]
+    Edit[Work samples - Edit] --> Select[Select multiple samples]
+    Select --> Confirm[Confirm removal]
+    Confirm --> Grid
+```
+
+Portfolio uploads target less than 5 MB per image and up to ten samples. Compression balances image quality and size; it is not guaranteed to preserve every original detail. Server checks use the configured Cloud Vision integration for prohibited usernames, brand/company names, logos and watermarks. Automated checks can miss or misclassify content and do not prove authorship.
+
+Instagram OAuth credentials and provider tokens stay on the server. Disconnecting is available after connection. Portfolio editing preserves the current screen instead of replacing it with a full-page refresh.
+
+## Notifications and sessions
+
+```mermaid
+flowchart LR
+    Event[Booking, payment, journey or service event] --> Records[Notification records and delivery eligibility]
+    Records --> Dispatcher[Authenticated notification dispatcher]
+    Dispatcher --> FCM[FCM - Android]
+    Dispatcher --> APNs[APNs - iOS when configured]
+    FCM --> Device[Registered recipient device]
+    APNs --> Device
+    Device --> Link[Open authorized app destination]
+```
+
+The bell is a clean notification settings entry; it does not show a history list. Android push has been configured. iOS delivery code exists, but APNs credentials, Apple membership and device validation remain required. A successful JavaScript export does not verify iPhone push delivery.
+
+One active login is enforced **per app**: a newer Customer login replaces an older Customer session, while a Professional session can remain active separately. See [notification and launch setup](docs/notifications-and-circle.md).
+
+## Animations and interactions
+
+| Area | Behavior | Implementation |
+| --- | --- | --- |
+| Startup | Original Circle ring-tracing branded splash | Shared animated splash with startup deadline |
+| Loading | Five craft illustrations bounce, scale and fade in sequence | `ServiceLoader`, React Native Animated |
+| Appearance | Sun/moon theme control | Shared light/dark theme UI |
+| Discovery and journey | Moving craft-head rider markers and follow camera | Mapbox and location interpolation |
+| Seasonal home | Banner-matched color fades through white service cards | Native/web gradient styling |
+| Service selection | Selected card border and corner tick | Shared service-card selection state |
+| Work samples | Inline upload/removal feedback | Preserves existing gallery during mutations |
+| Architecture visual | Request markers move between system layers | Local animated SVG with static fallback |
+
+The service loader uses only the five active crafts, respects the device's reduced-motion setting and stops its animation when unmounted. Loading animations do not add artificial waiting time.
+
+## Privacy and trust boundaries
+
+- Public profiles use generated aliases; legal names, contact details and payout data have separate access rules.
+- Row-level security and authenticated RPCs restrict access to private bookings, chat and financial records.
+- Native sessions use secure device storage. Environment secrets and signing files are excluded from Git.
+- Cashfree payment state is confirmed server-side; checkout callbacks alone cannot authorize service transitions.
+- OAuth state and callback handling are server-side. Instagram connection is not proof of professional skill.
+- Account deletion is currently support-assisted. Provider backups and required financial records may have separate retention requirements.
+
+[Privacy policy](https://circle-policies-cclabs.web.app/) · [Local policy source](artifacts/privacy-site/index.html) · [Security review](docs/security-video-review.md)
 
 ## Run locally
 
-Use Node 24 or newer and npm. Run these commands from this directory in two terminals:
+Use a Node version compatible with the Expo SDK in `mobile/package.json` and install dependencies from the lockfile.
 
-```bash
-npm install
-npm install --prefix server
-ADMIN_EMAIL=reviewer@example.com ADMIN_PASSWORD='replace-with-a-long-private-password' npm run dev --prefix server
+```powershell
+cd mobile
+npm ci
+Copy-Item .env.example .env
+# Fill the public app settings in .env locally.
+npm run web:customer
+# In another terminal, if needed:
+npm run web:professional
 ```
 
-```bash
-EXPO_PUBLIC_API_URL=http://localhost:3333 npm run web
+For native development, configure the native providers and use a development client:
+
+```powershell
+cd mobile
+npm run start:customer
+npm run start:professional
 ```
 
-Open the local URL printed by Expo. Create a talent account and a hiring account in the app. Sign in with the configured reviewer account to use the private review queue. The API health endpoint is `http://localhost:3333/health`.
+Mapbox and Cashfree require native modules; Expo Go is not a substitute for the configured development client. See [native development](docs/native-development.md).
 
-For a phone on the same network, replace `localhost` in `EXPO_PUBLIC_API_URL` with the computer's LAN IP, then run `npm start` and open the QR code in Expo Go. An Android emulator can use `http://10.0.2.2:3333`. The phone must reach the API at the configured address. Mobile release builds should use a public **HTTPS** API URL; Expo embeds `EXPO_PUBLIC_API_URL` in the client bundle at build time. Set `APP_ORIGINS` to the deployed web origin. Persist and back up `DATA_DIR` (default `server/data` when started from this directory).
+### Backend setup
 
-For Expo Go on an Android phone, put `EXPO_PUBLIC_API_URL=http://YOUR_COMPUTER_WIFI_IP:3333` in `.env.local` at the project root (not `server/.env`). Start the API with `npm run dev --prefix server`, then restart Expo with `npm start -- --clear --lan` and scan the QR code again. Keep both devices on the same Wi-Fi. Open `http://YOUR_COMPUTER_WIFI_IP:3333/health` in the phone's browser to check connectivity. If that fails, check that the API is running and your computer's firewall allows port 3333. Update `.env.local` if your computer's Wi-Fi IP changes. `localhost` and `127.0.0.1` on the phone refer to the phone itself.
+1. Create and link your own Supabase project.
+2. Configure phone OTP/SMS and Google sign-in with the correct callback URLs.
+3. For a fresh deployment, review and apply `supabase/migrations/` in filename order. Existing deployments must apply only outstanding migrations. The initial prototype replacement is destructive and must not be replayed against a populated production project.
+4. Populate server secrets from `supabase/.env.example` through the Supabase secret manager. Never place server secrets in `EXPO_PUBLIC_*` variables.
+5. Deploy the Edge Functions, configure signed Cashfree webhooks and schedule the trusted payout/refund/notification workers as appropriate.
+6. Configure provider OAuth redirects, storage rules, Cloud Vision, FCM and optionally APNs for the target environment.
+7. Validate authentication, real provider callbacks, payments, refunds, transfers and notification delivery before public launch.
 
-The source also includes an isolated illustrative demo at `/demo`, accessible from the welcome screen. It uses local sample people and photos to show a populated interface. Live accounts never show those people as verified members.
+Do not commit `.env`, service-account JSON, private signing keys, keystores or account tokens. Example environment files contain placeholders and public configuration identifiers only.
 
-## Main flows
+## Build variants
 
-- 24 craft categories, multi-craft profiles and specialties, work previews in discovery cards, location/date/daily-budget filters, paginated discovery and saved searches. Responsive layouts use Inter typography, warm ivory and taupe surfaces, photo profession cards, portfolio overlays, desktop navigation and mobile bottom navigation. Web cards have subtle hover and focus effects that respect reduced-motion settings.
-- Email/password accounts, talent and hiring roles, profile photo upload, public link media discovery, optional owner-authorized YouTube and professional Instagram imports, link management, shortlist, project inquiries, responses, briefs and in-app notifications.
-- Talent requests an ownership code, places it in a public portfolio bio, chooses its linked URL, captures a live camera photo and consents to review. A private admin compares the evidence and records an approval or rejection reason. The badge means a **manual profile and link check**, not legal identity or skill certification.
-- Account deletion removes profile data, conversations and private review photos. Review evidence is available only to authenticated admins. The server reads public portfolio HTML and stores discovered media URLs, without downloading the media files. Platform access may be restricted.
+```powershell
+cd mobile
+npx eas-cli@latest build --platform android --profile customer-apk
+npx eas-cli@latest build --platform android --profile professional-apk
+# Unsigned-for-iPhone simulator development builds:
+npx eas-cli@latest build --platform ios --profile customer-simulator
+npx eas-cli@latest build --platform ios --profile professional-simulator
+```
 
-## Portfolio sources
+EAS requires the project's Expo account and configured provider/build credentials. Simulator archives run in an iOS Simulator on a Mac; they cannot install on a physical iPhone. Signed physical-iPhone distribution requires the appropriate Apple developer setup.
 
-Talent can paste an HTTPS URL for Instagram, Behance, YouTube, Vimeo or a personal site. The API fetches the public HTML, follows safe redirects and extracts media and video links that the page exposes. It stores candidate URLs and displays at most ten images and ten videos in a consistent, creator-controlled order; a page with fewer items shows only those items. A blocked or JavaScript-only page may yield no media, while its profile link is still retained. The Refresh public links button rescans pasted pages. Removing a source removes its discovered media.
+Local native Android builds that share generated dependency output must run sequentially. Previous verification caught cross-variant embedded configuration from concurrent builds; each release must verify the embedded app role as well as its package name and signature.
 
-For owner-authorized imports, configure a Google OAuth client with the YouTube Data API and a redirect URI matching `GOOGLE_REDIRECT_URI`, and/or a Meta app with Instagram API with Instagram Login and a redirect URI matching `INSTAGRAM_REDIRECT_URI`. Set the client ID, secret and redirect URI as server environment variables (see `server/.env.example`). Instagram Login supports professional Creator and Business accounts. The buttons are disabled until their credentials are configured. OAuth tokens are used for one import and discarded, so users reconnect to update connected media. Behance is supported through public URL discovery in this MVP; there is no Behance account connection. Provider access, app permissions and review must be configured before live owner authorization can be used.
+## Validation and release status
 
-### Connect accounts from Expo Go
+Latest recorded validation: **19 October 2026**. See [release validation record](artifacts/previews/dashboard-request-validation.json).
 
-1. Give the API a reachable HTTPS address. Use a deployed API subdomain on your existing domain, or an HTTPS tunnel forwarding to local port 3333. For example, with an installed and authenticated ngrok CLI, run `ngrok http 3333` while the API is running. A website domain by itself does not host this API. Confirm `https://YOUR_API_HOST/health` opens on the phone.
-2. In Google Cloud, enable YouTube Data API v3 and configure the OAuth consent screen. Use a **Web application** OAuth client because the server exchanges the code. Register `https://YOUR_API_HOST/oauth/youtube/callback` as an authorized redirect URI. Add your Google account as a test user while the app is in testing. See [Google's server OAuth guide](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps).
-3. In your Meta app, configure **Instagram API with Instagram Login**. Register `https://YOUR_API_HOST/oauth/instagram/callback` as an allowed redirect URI. Use its Instagram App ID and App Secret and configure eligible test accounts while in development. The integration requests `instagram_business_basic`; connecting requires an Instagram Creator or Business account. See [Meta's Instagram Login guide](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/).
-4. Update `GOOGLE_REDIRECT_URI` and `INSTAGRAM_REDIRECT_URI` in `server/.env` to those exact registered URLs. Set the matching client IDs and secrets there, using `server/.env.example` as a reference. Keep secrets out of `EXPO_PUBLIC_*` variables. Restart the API. If a temporary tunnel URL changes, update both the server configuration and provider consoles.
-5. The app's root `.env.local` can keep its LAN API address on the same Wi-Fi, or use `EXPO_PUBLIC_API_URL=https://YOUR_API_HOST` for remote testing. Restart Expo after changing it. Sign in as talent, open Portfolio, and tap **Connect YouTube** or **Connect Instagram**. Authorize in the browser and return to Expo Go; the screen refreshes connected media automatically. **Check connected media** also refreshes manually. **Reconnect** imports current media again; **Remove** deletes the source and its imported media from CC Circle.
+| Check | Recorded result |
+| --- | --- |
+| Mobile regression suite | 134 passing tests |
+| TypeScript | Passed |
+| Android Customer | 0.1.9, version code 10; signed standalone APK verified |
+| Android Professional | 0.1.14, version code 15; signed standalone APK verified |
+| Embedded variant configuration | Verified separately for both APKs |
+| Native modules and 16 KB alignment | Verified in release artifacts |
+| iOS JavaScript exports | Both variants passed |
+| Latest physical-device testing | Not performed for these release artifacts |
+| Production store release | Not established by these checks |
 
-These are portfolio connections for an existing CC Circle account, not social sign-in. The app imports public YouTube videos or Instagram posts and stores their URLs; it does not keep provider tokens for background synchronization.
+APK and simulator binaries are deliberately excluded from source control. Release metadata remains in [Android artifacts](artifacts/android/) and [iOS artifacts](artifacts/ios/). Upload approved installable binaries through a distribution channel or GitHub Release separately.
 
-### Display imported work
-
-The Portfolio screen and public talent profile share an Images/Videos gallery showing up to ten available items of each kind. Tap an image for a full-size view or a video for in-app playback. YouTube and Vimeo use their embedded players. Instagram videos use direct CDN URLs with Expo Video; Instagram posts are never embedded. Only the selected video creates a player, and closing the viewer releases it. The original source remains accessible from the viewer. YouTube embedding follows [Google's player identity requirements](https://developers.google.com/youtube/terms/required-minimum-functionality#api-client-identity-and-credentials).
-
-YouTube connects import public channel videos. Professional Instagram connects import images, carousel items and videos. Reconnect existing Instagram sources once to import playable video URLs; older imports contain only post links. Instagram CDN URLs can expire, so reconnect if media stops loading. Behance public profile links scan visible media and up to five linked public project pages. Public Instagram profile scans follow up to ten visible post/Reel links and JSON-only video references and extract direct video URLs from public JSON when exposed. Reel and story page links are not counted as playable video files. Other HTTPS portfolios import media exposed in their public HTML. A profile URL alone cannot guarantee access to every image or video; private posts, blocked pages and disabled embeds may be unavailable. Unsupported videos retain an original-source link.
-
-## Verify and build
-
-```bash
-npm run lint
+```powershell
+cd mobile
 npm run typecheck
-npm test --prefix server
-npx expo-doctor
-npx expo export --platform web
-npx expo export --platform android
-npx expo export --platform ios
+npm test
+
+cd ../supabase
+npm ci
+npm test
 ```
 
-Web export goes to `dist/`; host it with a single-page route fallback. `eas.json` contains build profiles. To create installable iOS and Android binaries, configure an Expo account, Apple/Google signing and store credentials, set the production API URL, then run `npx eas-cli@latest build --platform ios --profile production` and the equivalent Android command. No store accounts or signing credentials are included in this source.
+Tests cover behavior including access rules, booking/payment transitions, pricing, portfolio editing, service selection, per-app sessions, earnings periods and multiple professionals per craft. Database tests emulate Supabase roles; they do not prove live gateway settlement or device behavior.
 
-## Structure
+### Work before a public launch
 
-- `src/app/`: Expo Router screens; `src/components/`: shared UI and craft icons; `src/lib/api.ts`: API client.
-- `server/src/`: Express API and SQLite schema; `server/test/`: core workflow integration test.
-- `assets/demo/`: illustrative sample photos used in the demo and welcome artwork; `src/data.ts`: category names and demo content.
-- `supabase/migrations/`: an earlier alternative schema prototype. The running app uses the Node/SQLite API.
+Validate real-device navigation and payments, live refunds/payouts and worker scheduling; complete iOS signing/APNs setup; confirm SMS delivery and provider app-review access; review cancellation/refund and tax requirements; finish account-deletion operations, support/disputes, monitoring, backups and restore drills. Review accessibility and current dependency advisories for the release environment.
 
-## Before a public launch
+## Feature documentation
 
-This is a working full-stack MVP, not a deployed service. A production rollout still needs hosting, domain and TLS, app store accounts, backup and monitoring, password reset and email ownership confirmation, abuse reporting/moderation, legal review of privacy and consent text, and real-device accessibility and security review. The review process is human-operated; there is no automatic face match or liveness provider. Public profile links are supplied by their owners, and some external sites may block automated HTML access or direct image embedding. Verify ownership claims independently before approving them.
+| Topic | Guide |
+| --- | --- |
+| Registration and public names | [Registration](docs/registration-and-names.md) |
+| Team requests | [Team requests](docs/team-requests.md) |
+| Service OTPs | [Service verification](docs/service-verification.md) |
+| Portfolio and provider setup | [Social portfolios](docs/social-portfolios.md) |
+| Search and venue providers | [Google Maps setup](docs/google-maps-setup.md) |
+| Craft-head maps | [3D navigation](docs/craft-head-navigation.md) |
+| iOS development | [iPhone and simulator builds](docs/iphone-builds.md) |
 
-## Creative marketplace workspace
+Some older feature notes describe historical rollout stages. The current source and the dated validation record above establish the latest implemented behavior and tested limits.
 
-- Creators: registration → profile setup → portfolio import and curation → opportunities → application conversation → accepted and confirmed collaboration.
-- Hiring teams: browse work → save creators → named project shortlists and comparison → publish a multi-craft brief or send an invitation → discuss scope in the inbox → confirm collaboration.
-- Profiles include specialties, experience, rates, self-reported credits and dated availability. Date selection uses native calendar pickers on Android/iOS and the browser calendar on web. Optional numeric daily rates are in INR; the discovery budget filter uses that field. Unset rates and dates do not match those filters.
-- Portfolio curation supports cover selection, captions/contributions, ordering and hiding imported items. Preferences are stored separately from imported rows so refreshing an unchanged source preserves curation. If a provider changes a media path, that item may need to be curated again. Only available media URLs are stored; files remain on their source platforms.
-- Named shortlists support a read-only sharing link. Anyone with the link sees only public creator profiles and the project name. Reset sharing revokes the previous link. On Expo Go a sharing link targets the development app; deploy the web app for public browser links.
-- Applicants and hiring teams can reply in private conversations. A team reviews applications; a creator reviews invitations. Accepted conversations can be marked as confirmed by the hiring team. Confirmation is a workflow status; contracts and payments are handled outside the app. The inbox refreshes every 15 seconds while focused.
-- Following appears in Community; creator activity counters reflect followers, saved profiles, inquiries and confirmed collaborations. Saved searches show current match counts in Discover. No automated email alerts or paid subscriptions are enabled.
-- SQLite schema additions migrate automatically on server startup, preserving existing profiles and imported media. Restart the API after updating and restart Expo with `npm start -- --clear --lan` to load the font package.
+---
 
-Validation: `npm run lint`, `npm run typecheck`, `npm test --prefix server`, and `npx expo export --platform web --platform android`. The marketplace integration test covers curation after refresh, filters, cross-account access, sharing-link revocation, applications, replies, confirmation, and account cleanup.
-
-Community is the first navigation destination and signed-in landing page; Overview is second. The creator feed includes public text updates, persistent likes and comments, a Following filter, profile shortcuts, suggested creators, and open project briefs. A desktop three-column layout collapses to a single column on mobile. Portfolio spotlights are labelled and use existing creator work when the feed is empty.
-
-The welcome account section and sign-in/register page include a three-row looping craft photo gallery, with alternate scrolling directions, pause controls, hover/focus pause, and reduced-motion support.
-# cc-circle
+Operated by **CC Creative Labs** · [support@cclabs.space](mailto:support@cclabs.space)

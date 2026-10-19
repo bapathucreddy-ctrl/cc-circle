@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-17",
+  "mobileTests": 87,
+  "databaseTests": 21,
+  "typeScript": true,
+  "web": {
+    "variants": [
+      "customer",
+      "professional"
+    ],
+    "singleAnimatedSplash": true,
+    "circleBranding": true,
+    "notificationInbox": true,
+    "unreadAndMarkAllRead": true,
+    "pushSetupMessage": true,
+    "mobileOverflow": false,
+    "runtimeErrors": 0,
+    "mockedBackend": true,
+    "realBookingPaymentOrOtpMutations": 0
+  },
+  "hosted": {
+    "migrations": 26,
+    "privateWorkerUnauthenticatedStatus": 401,
+    "privateWorkerAuthenticatedStatus": 200,
+    "immediateWakeupAndRecoverySchedule": true,
+    "instagramClientCredentialsConfigured": true,
+    "instagramInteractiveAuthorizationTested": false
+  },
+  "push": {
+    "configured": false,
+    "reason": "Firebase setup not completed by owner",
+    "physicalDeviceDeliveryTested": false
+  },
+  "native": {
+    "professional": {
+      "version": "0.1.10",
+      "versionCode": 11,
+      "verified": true,
+      "transparentLaunchResources": 10,
+      "nativeNotifications": true,
+      "originalSignature": true,
+      "sha256": "c3ef4924a06dee1a34a88a0a1392dcbedd6eb1929aab026895fe16f83b8784dd"
+    },
+    "customer": {
+      "version": "0.1.5",
+      "versionCode": 6,
+      "verified": true,
+      "transparentLaunchResources": 10,
+      "nativeNotifications": true,
+      "originalSignature": true,
+      "sha256": "30ad173122bff34581413a5110c98ffca29c588579410eead9e552330fbbf7f2"
+    }
+  },
+  "physicalDeviceTested": false
+}

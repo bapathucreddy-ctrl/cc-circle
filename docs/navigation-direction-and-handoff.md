@@ -1,0 +1,13 @@
+# Navigation direction and optional Maps handoff — 17 October 2026
+
+Customer 0.1.3 / Android code 4 and professional 0.1.8 / Android code 9 share these navigation changes.
+
+- Tracking scooter artwork turns along the reported GPS bearing, with movement-derived bearing when course is missing. Three-metre stationary jitter keeps the last heading, and north crossings use the short turn. The right-facing artwork's 90-degree offset is accounted for. Native marker rotation also compensates for the actual camera bearing; web markers use map-relative rotation.
+- Follow camera uses zoom 18.3, pitch 60 degrees and additional forward space above the rider. Aerial mode remains available. This is a Mapbox street-level follow view, not Google Street View imagery.
+- Start journey still publishes its first actual GPS fix immediately. The background service requests navigation fixes every three seconds without deliberate batching; publication throttle and booking fallback polling are two seconds. Realtime subscriptions refresh on connection/reconnection. GPS, network and OS scheduling still determine actual arrival time; zero delay is not guaranteed.
+- Booking fixes older than 15 seconds stop supplying live ETA/distance and are labelled delayed/last known. Existing timestamp is retained. A locked/minimised phone can keep publishing through the opted-in foreground location service while online. A powered-off phone, lost connectivity or force-stopped app cannot transmit a new GPS fix; no synthetic movement is displayed.
+- Professionals see **Open in Google Maps** only during an active journey, after Start journey and before service starts. It passes the exact booked destination coordinate to the Google Maps app and uses the device's current origin. If the app is absent, it opens browser directions. It does not change the booking, start a journey, stop CC Circle's background service or replace Mapbox rendering/routing. The Google action is optional and never opens automatically.
+
+TypeScript and all 72 mobile tests pass. Five new tests cover cardinal scooter directions/camera rotation, heading fallback/jitter/north crossing, Android/iOS links, browser fallback and invalid coordinates, and role/stage gating for the optional Google button. Existing background lifecycle and first booking GPS tests remain. Native installation, a real moving/locked-screen journey and Google Maps app handoff require physical verification; no real booking/payment/OTP actions are performed automatically.
+
+Google link formats follow [Maps URLs](https://developers.google.com/maps/documentation/urls/get-started) and [Android navigation intents](https://developer.android.com/guide/components/google-maps-intents).

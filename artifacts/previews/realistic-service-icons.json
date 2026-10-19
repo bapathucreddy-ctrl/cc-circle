@@ -1,0 +1,42 @@
+{
+  "mode": "built-in image_gen",
+  "transparent": true,
+  "assets": [
+    {
+      "key": "makeup",
+      "prompt": "Create one polished realistic 3D product cutout for a mobile app service category icon: an open rose-pink lipstick in black and gold casing alongside a full fluffy makeup brush. Premium studio product rendering, real materials and subtle natural color, soft lighting, crisp recognizable silhouette at 66px. Centered square composition, object fills 82 percent of frame, all objects fully visible. Actual transparent background. No circle, no disc, no medallion, no badge, no enclosing shape, no platform, no pedestal, no frame, no person or scooter, no words, no logos, no watermark. This matches the realistic objects on our rider head icons but removes their circular backing entirely.",
+      "source": "C:\\Users\\Admin\\.codex\\generated_images\\01a11c1d-2f3f-7ec0-9e6b-7ae502fbae90\\exec-cc0bf7ee-4ae5-4916-876f-9fba214c12a0.png",
+      "path": "mobile/assets/crafts/realistic-makeup.png"
+    },
+    {
+      "key": "photographer",
+      "prompt": "Create one polished realistic 3D product cutout for a mobile app service category icon: a realistic black mirrorless camera with a substantial glass lens, three-quarter front view. Premium studio product rendering, real materials and subtle natural color, soft lighting, crisp recognizable silhouette at 66px. Centered square composition, object fills 82 percent of frame, all objects fully visible. Actual transparent background. No circle, no disc, no medallion, no badge, no enclosing shape, no platform, no pedestal, no frame, no person or scooter, no words, no logos, no watermark. This matches the realistic objects on our rider head icons but removes their circular backing entirely.",
+      "source": "C:\\Users\\Admin\\.codex\\generated_images\\01a11c1d-2f3f-7ec0-9e6b-7ae502fbae90\\exec-eacc0c4e-0071-4f05-932a-f5f854268b03.png",
+      "path": "mobile/assets/crafts/realistic-photographer.png"
+    },
+    {
+      "key": "editor",
+      "prompt": "Create one polished realistic 3D product cutout for a mobile app service category icon: a realistic black and white film clapperboard with three small colored timeline blocks below it, no lettering. Premium studio product rendering, real materials and subtle natural color, soft lighting, crisp recognizable silhouette at 66px. Centered square composition, object fills 82 percent of frame, all objects fully visible. Actual transparent background. No circle, no disc, no medallion, no badge, no enclosing shape, no platform, no pedestal, no frame, no person or scooter, no words, no logos, no watermark. This matches the realistic objects on our rider head icons but removes their circular backing entirely.",
+      "source": "C:\\Users\\Admin\\.codex\\generated_images\\01a11c1d-2f3f-7ec0-9e6b-7ae502fbae90\\exec-69b38e1b-75df-4912-910e-947662a70941.png",
+      "path": "mobile/assets/crafts/realistic-editor.png"
+    },
+    {
+      "key": "hairstylist",
+      "prompt": "Create one polished realistic 3D product cutout for a mobile app service category icon: professional silver hair scissors crossed with a black comb. Premium studio product rendering, real materials and subtle natural color, soft lighting, crisp recognizable silhouette at 66px. Centered square composition, object fills 82 percent of frame, all objects fully visible. Actual transparent background. No circle, no disc, no medallion, no badge, no enclosing shape, no platform, no pedestal, no frame, no person or scooter, no words, no logos, no watermark. This matches the realistic objects on our rider head icons but removes their circular backing entirely.",
+      "source": "C:\\Users\\Admin\\.codex\\generated_images\\01a11c1d-2f3f-7ec0-9e6b-7ae502fbae90\\exec-fcf314f2-a4b4-408b-8dd3-dbd9c68c2763.png",
+      "path": "mobile/assets/crafts/realistic-hairstylist.png"
+    },
+    {
+      "key": "contentcreator",
+      "prompt": "Create one polished realistic 3D product cutout for a mobile app service category icon: a black smartphone on a handheld stabilizer gimbal, front view, small simple play triangle on dark screen. Premium studio product rendering, real materials and subtle natural color, soft lighting, crisp recognizable silhouette at 66px. Centered square composition, object fills 82 percent of frame, all objects fully visible. Actual transparent background. No circle, no disc, no medallion, no badge, no enclosing shape, no platform, no pedestal, no frame, no person or scooter, no words, no logos, no watermark. This matches the realistic objects on our rider head icons but removes their circular backing entirely.",
+      "source": "C:\\Users\\Admin\\.codex\\generated_images\\01a11c1d-2f3f-7ec0-9e6b-7ae502fbae90\\exec-2213ee18-de3b-4e7f-b943-b226299f9fe2.png",
+      "path": "mobile/assets/crafts/realistic-contentcreator.png"
+    },
+    {
+      "key": "team",
+      "prompt": "Create one polished realistic 3D product cutout for a mobile app service category icon: a compact balanced arrangement of a camera, makeup brush and film clapperboard representing an event creative team. Premium studio product rendering, real materials and subtle natural color, soft lighting, crisp recognizable silhouette at 66px. Centered square composition, object fills 82 percent of frame, all objects fully visible. Actual transparent background. No circle, no disc, no medallion, no badge, no enclosing shape, no platform, no pedestal, no frame, no person or scooter, no words, no logos, no watermark. This matches the realistic objects on our rider head icons but removes their circular backing entirely.",
+      "source": "C:\\Users\\Admin\\.codex\\generated_images\\01a11c1d-2f3f-7ec0-9e6b-7ae502fbae90\\exec-ceda52a3-4d75-48e3-af6b-7a06d89c71b1.png",
+      "path": "mobile/assets/crafts/realistic-team.png"
+    }
+  ]
+}

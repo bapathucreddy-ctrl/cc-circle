@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-18T17:57:28.792Z",
+  "features": [
+    "Top-of-home occasion banners",
+    "Two-column session service picker",
+    "Flat compact professional profile header",
+    "Two-review previews with separate paginated review pages",
+    "Stable database-generated public professional usernames",
+    "Owner-only private account identity retained",
+    "Work sample Edit menu with upload and multi-select confirmed deletion",
+    "Stable gallery resource and image URLs during mutations"
+  ],
+  "migration": "202610180004",
+  "hostedMigrationVerified": true,
+  "typecheckPassed": true,
+  "mobileTestsPassed": 117,
+  "backendTestsPassed": 26,
+  "additionalLegacyIdentityMigrationTestPassed": true,
+  "deploymentChecksPassed": 8,
+  "iosCustomerJavaScriptExportPassed": true,
+  "iosProfessionalJavaScriptExportPassed": true,
+  "previewUsesSampleData": true,
+  "preview": "simplified-profiles.png",
+  "apksRebuilt": true,
+  "nativeRuntimeTested": false,
+  "apkPackagesVerified": true,
+  "androidReleases": {
+    "customer": "0.1.8",
+    "professional": "0.1.13"
+  },
+  "copiedToDeviceDownloads": true,
+  "deviceCopiesSha256Verified": true,
+  "apkVerifiedAt": "2026-10-18T18:21:03.650Z"
+}

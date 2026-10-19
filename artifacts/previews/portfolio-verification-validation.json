@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-18T12:36:19.926Z",
+  "instagramPurpose": "Account ownership verification only; no new media imports",
+  "newPortfolioSamples": "Up to 10 uploaded images, each strictly below 5000000 bytes",
+  "moderation": "Google Cloud Vision TEXT_DETECTION and LOGO_DETECTION; conservative text/logo rejection; fail closed on errors",
+  "serverKeyConfigured": true,
+  "syntheticLiveVisionCheck": {
+    "clearImageAccepted": true,
+    "textImageRejected": true,
+    "userMediaUsed": false,
+    "temporaryFunctionRemoved": true
+  },
+  "typecheckPassed": true,
+  "mobileTestsPassed": 112,
+  "deployedFunctions": [
+    "portfolio",
+    "portfolio-callback"
+  ],
+  "apkRebuilt": false,
+  "physicalUploadFlowTested": false,
+  "publicPrivacyPageNeedsReupload": true
+}

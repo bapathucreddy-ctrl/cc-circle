@@ -1,0 +1,13 @@
+﻿# Android location crash hotfix — 17 October 2026
+
+Professional release 0.1.3 (Android version code 4); customer stays on 0.1.2 / code 3.
+
+The Samsung A16 (SM-A166P, Android 16 / API 36) crash buffer showed `IllegalArgumentException: Requested job cannot be persisted without holding android.permission.RECEIVE_BOOT_COMPLETED permission`. It occurred inside Expo TaskManager's `TaskManagerUtils.updateOrScheduleJob`, called by the location broadcast receiver. The crash repeated as location callbacks arrived and when reopening the app.
+
+The professional manifest declared location/background/foreground-service permissions but omitted `RECEIVE_BOOT_COMPLETED`. Expo TaskManager creates location jobs with `JobInfo.Builder.setPersisted(true)`; Android requires that normal install-time permission to schedule these jobs, even when the phone has not rebooted. This was a manifest omission in the background-location release. The connected device's crash log established the cause; the separately investigated foreground-service-start race was not the reported failure and no SDK patch was applied.
+
+The fix adds the permission only to the professional Expo config and its generated release manifest. It increments only the professional app's version. A regression test checks the professional declaration and customer exclusion. The APK verifier also rejects a professional build without the permission. The original signing certificate is retained so an `adb install -r` update preserves the existing account, settings and granted location permissions.
+
+TypeScript and all 56 mobile tests pass. The 18 backend tests passed in the preceding release; this hotfix changes no backend or database code. APK signature, final embedded Hermes bundle equality, native modules, version/identity, permissions and ZIP/ARM64 16KB alignment are checked before installation.
+
+The professional update was installed successfully on the Samsung A16 using `adb install -r`; Android confirms version 0.1.3 / code 4 and the required permission is granted. Two cold launches and a background interval produced no new crash entries, but the phone was asleep behind its keyguard. These checks do not verify visible UI, GPS publication or the foreground location service. The phone subsequently disconnected from ADB before unlocked validation could run, so release metadata retains `physicalDeviceTested: false`. Reconnect and unlock the phone to complete `.local-tools/validate-visible-location-hotfix.cjs`. No account clearing, phone reboot, booking action or payment action is needed for this fix. Only the professional app is installed/launched/stopped during testing; unrelated apps and local app servers are preserved.

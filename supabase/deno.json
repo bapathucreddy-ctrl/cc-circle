@@ -1,0 +1,7 @@
+{
+  "nodeModulesDir": "none",
+  "compilerOptions": { "strict": true },
+  "tasks": {
+    "check": "deno check functions/cashfree-order/index.ts functions/cashfree-verify/index.ts functions/cashfree-webhook/index.ts functions/cashfree-refunds/index.ts functions/cashfree-beneficiary/index.ts functions/cashfree-payouts/index.ts"
+  }
+}

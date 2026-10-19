@@ -1,0 +1,13 @@
+# Extreme close-up navigation reference
+
+Preview image: [navigation-3d-closeup.png](navigation-3d-closeup.png).
+
+This reference used a public sample Bengaluru route at Mapbox zoom 20.4 / pitch 70. The user approved it and requested implementation for all crafts. That design is now included in professional 0.1.9 / customer 0.1.4. The image remains a browser reference, not a physical Android screenshot.
+
+The white scooter is a 3D-style transparent raster viewed from behind. The makeup craft badge is integrated as the rider's head, with no separate floating profession bubble. It is a rendered sprite, not an animated 3D mesh. All seven craft variants and a generic fallback are now saved in mobile/assets/brand/.
+
+Generation mode: built-in `image_gen`, transparent background requested and alpha verified. The original generated image was preserved; a project copy is at `mobile/assets/brand/tracking-scooter-3d-makeup-preview.png`. Its production copy is rider-3d-makeup.png; both map components consume the corresponding craft rider assets.
+
+## Exact generation prompt
+
+Use case: stylized-concept. Asset type: transparent PNG navigation map vehicle marker, one single complete cutout. Create a high-quality miniature 3D white scooter with an anonymous dark-clothed rider, seen directly from behind and slightly above as though following it down a street. Scooter drives AWAY FROM VIEWER, front wheel points toward TOP OF IMAGE. Its REAR faces viewer, small red tail lamp and rear tire clearly visible at bottom. Real volumetric 3D geometry, rounded white body panels, black seat and wheels, soft realistic shading, clear silhouette at small sizes. The rider must have NO HUMAN HEAD and no helmet. In exactly the anatomical position of the head, integrated on top of the neck/shoulders, place ONE round white professional craft badge containing a recognizable upright lipstick and makeup brush icon. This badge IS the rider's head, not a separate floating bubble and not beside the scooter. Badge faces viewer and remains clearly readable. Show arms holding handlebars, back of dark jacket, legs riding normally. Perfectly upright, vertically symmetrical composition, forward heading straight up, no side-profile scooter, no sideways turning. Palette white and charcoal scooter, natural skin tone hands, small red taillight; lipstick badge may contain muted pink lipstick. All vehicle parts visible, generous but moderate transparent margin, isolated object only, actual fully transparent alpha background. No map, no floor, no surrounding scenery, no lettering, no logos, no watermark, no arrows.

@@ -1,0 +1,87 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development"
+    },
+    "preview": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "preview",
+      "ios": { "simulator": false }
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production"
+    },
+    "apk": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "production",
+      "android": { "buildType": "apk" }
+    },
+    "customer-apk": {
+      "extends": "apk",
+      "env": { "CC_APP_VARIANT": "customer", "EXPO_PUBLIC_APP_VARIANT": "customer" }
+    },
+    "professional-apk": {
+      "extends": "apk",
+      "env": { "CC_APP_VARIANT": "professional", "EXPO_PUBLIC_APP_VARIANT": "professional" }
+    },
+    "customer-development": {
+      "extends": "development",
+      "env": {
+        "CC_APP_VARIANT": "customer",
+        "EXPO_PUBLIC_APP_VARIANT": "customer"
+      }
+    },
+    "professional-development": {
+      "extends": "development",
+      "env": {
+        "CC_APP_VARIANT": "professional",
+        "EXPO_PUBLIC_APP_VARIANT": "professional"
+      }
+    },
+    "customer-simulator": {
+      "extends": "customer-development",
+      "ios": { "simulator": true }
+    },
+    "professional-simulator": {
+      "extends": "professional-development",
+      "ios": { "simulator": true }
+    },
+    "customer-preview": {
+      "extends": "preview",
+      "env": {
+        "CC_APP_VARIANT": "customer",
+        "EXPO_PUBLIC_APP_VARIANT": "customer"
+      }
+    },
+    "professional-preview": {
+      "extends": "preview",
+      "env": {
+        "CC_APP_VARIANT": "professional",
+        "EXPO_PUBLIC_APP_VARIANT": "professional"
+      }
+    },
+    "customer-production": {
+      "extends": "production",
+      "env": {
+        "CC_APP_VARIANT": "customer",
+        "EXPO_PUBLIC_APP_VARIANT": "customer"
+      }
+    },
+    "professional-production": {
+      "extends": "production",
+      "env": {
+        "CC_APP_VARIANT": "professional",
+        "EXPO_PUBLIC_APP_VARIANT": "professional"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "validatedOn": "2026-10-19",
+  "profileLocationCardRemoved": true,
+  "profileMyBookingsRemoved": true,
+  "separateAvailabilitySectionRemoved": true,
+  "powerAvailabilityToggleBesideLogout": true,
+  "onlineOfflineLabelBelowToggle": true,
+  "logoutDoorAndArrowSymbol": true,
+  "availabilityMutationDeduplicated": true,
+  "goingOfflineStopsLocationSharing": true,
+  "uploadEditMenuGuidance": "Upload only your own work. No watermarks, usernames, company names or logos.",
+  "typescriptPassed": true,
+  "mobileTestsPassed": 129,
+  "preview": "artifacts/previews/professional-profile-controls.png",
+  "previewUsesSampleData": true,
+  "nativeRuntimeTested": false,
+  "apksRebuilt": false,
+  "matchingVectorSourceIcons": true,
+  "iconSources": [
+    "mobile/assets/icons/power.svg",
+    "mobile/assets/icons/logout.svg"
+  ],
+  "iconsRasterizedWithTransparency": true,
+  "latestIconCheck": {
+    "typescriptPassed": true,
+    "previewVisuallyChecked": true,
+    "apksRebuilt": false
+  }
+}

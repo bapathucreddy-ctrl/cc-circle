@@ -1,0 +1,15 @@
+{
+  "role": "professional",
+  "nativeConfigIntrospected": true,
+  "nativeProjectGenerated": false,
+  "nativeBuildTested": false,
+  "iosJavaScriptExport": true,
+  "displayName": "Circle",
+  "apsEnvironment": "development",
+  "backgroundLocation": true,
+  "locationPermissionCopy": true,
+  "alwaysLocationPermissionCopy": true,
+  "googleMapsScheme": true,
+  "nativeRuntimeTested": false,
+  "remotePushTested": false
+}

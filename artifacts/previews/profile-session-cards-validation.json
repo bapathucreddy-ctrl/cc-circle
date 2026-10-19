@@ -1,0 +1,27 @@
+{
+  "validatedOn": "2026-10-19",
+  "homeFestivePicksHeading": true,
+  "aboutBeforeServices": true,
+  "horizontalServicePhotoCards": true,
+  "selectedCardBlackBorderAndCornerTick": true,
+  "selectionPreservedWhenBooking": true,
+  "ratingDistributionOnProfile": true,
+  "reviewPreviewCount": 2,
+  "viewMoreReviewsBelowPreview": true,
+  "feePopupDismissalSuppressesStaleHover": true,
+  "bookingFeeDisplayAllocation": {
+    "platformPercent": 70,
+    "paymentHandlingPercent": 30,
+    "rounding": "Nearest paise; payment handling is remainder",
+    "totalUnchanged": true,
+    "additionalCharge": false
+  },
+  "mobileTestsPassed": 128,
+  "typescriptPassed": true,
+  "customerIosJavaScriptExportPassed": true,
+  "professionalIosJavaScriptExportPassed": true,
+  "preview": "artifacts/previews/profile-session-cards.png",
+  "previewUsesSampleData": true,
+  "nativeRuntimeTested": false,
+  "apksRebuilt": false
+}
