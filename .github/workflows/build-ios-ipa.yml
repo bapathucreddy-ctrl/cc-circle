@@ -1,0 +1,76 @@
+name: Build iOS IPA for SideStore
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'App Variant to build'
+        required: true
+        default: 'customer'
+        type: choice
+        options:
+          - customer
+          - professional
+
+jobs:
+  build:
+    name: Build iOS Unsigned IPA
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          npm ci
+
+      - name: Generate iOS native project (Expo Prebuild)
+        env:
+          CC_APP_VARIANT: ${{ github.event.inputs.variant }}
+          EXPO_PUBLIC_APP_VARIANT: ${{ github.event.inputs.variant }}
+          EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_KEY }}
+        run: |
+          cd mobile
+          npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        run: |
+          cd mobile/ios
+          pod install
+
+      - name: Build Xcode Archive (Unsigned)
+        run: |
+          cd mobile
+          xcodebuild archive \
+            -workspace ios/Circle.xcworkspace \
+            -scheme Circle \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Circle.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package into IPA
+        run: |
+          cd mobile
+          mkdir -p Payload
+          cp -r build/Circle.xcarchive/Products/Applications/Circle.app Payload/
+          zip -r "Circle-${{ github.event.inputs.variant }}-unsigned.ipa" Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "Circle-${{ github.event.inputs.variant }}-IPA"
+          path: "mobile/Circle-${{ github.event.inputs.variant }}-unsigned.ipa"
+          retention-days: 7
