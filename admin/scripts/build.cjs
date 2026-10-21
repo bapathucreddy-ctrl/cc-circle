@@ -1,0 +1,11 @@
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..'),mobile=path.resolve(root,'../mobile');
+const {env}=require(path.join(mobile,'node_modules/@expo/env')).get(mobile,{silent:true});
+const url=env.EXPO_PUBLIC_SUPABASE_URL,key=env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY||env.EXPO_PUBLIC_SUPABASE_KEY;
+if(!url?.startsWith('https://')||!key||key.startsWith('sb_secret_'))throw Error('Configure public Supabase client settings in mobile/.env');
+if(key.split('.').length===3&&JSON.parse(Buffer.from(key.split('.')[1],'base64url')).role!=='anon')throw Error('Only a public client key may enter the admin bundle');
+fs.mkdirSync(path.join(root,'dist'),{recursive:true});
+require('esbuild').buildSync({entryPoints:[path.join(root,'src/app.js')],bundle:true,minify:true,platform:'browser',format:'esm',target:['es2022'],outfile:path.join(root,'dist/app.js'),define:{__CIRCLE_SUPABASE_URL__:JSON.stringify(url),__CIRCLE_PUBLIC_KEY__:JSON.stringify(key)},sourcemap:false});
+for(const file of ['index.html','style.css'])fs.copyFileSync(path.join(root,'src',file),path.join(root,'dist',file));
+fs.copyFileSync(path.join(mobile,'assets/brand/mark-black.svg'),path.join(root,'dist/logo.svg'));
+console.log('Built Circle banner admin with public client configuration only.');

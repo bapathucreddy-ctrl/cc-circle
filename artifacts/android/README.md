@@ -1,18 +1,17 @@
-# Circle Android releases
+# Circle Android updates
 
-Latest verified builds: 19 October 2026.
+Latest builds: 21 October 2026.
 
-| App | Version | APK size | Download |
+| App | Version | Size | Download |
 | --- | --- | --- | --- |
-| Customer | 0.1.10 / code 11 | 82.96 MB | [Customer APK](Circle-Customer.apk) |
-| Professional | 0.1.15 / code 16 | 82.96 MB | [Professional APK](Circle-Professional.apk) |
+| Customer | 0.1.14 / code 15 | 56.24 MB | [APK](Circle-Customer-0.1.14.apk) |
+| Professional | 0.1.19 / code 20 | 56.07 MB | [APK](Circle-Professional-0.1.19.apk) |
+| Admin | 0.1.0 / code 1 | 0.09 MB | [APK](Circle-Admin-0.1.0.apk) |
 
-APK binaries are generated locally and excluded from Git. Metadata and SHA-256 checksums are in `customer-build.json` and `professional-build.json`. Versioned copies are retained alongside the current filenames.
+These builds retain the existing package IDs and signing keys and update the previous releases. The customer app includes compact map controls, a collapsed nearby list, admin-uploaded banners and configurable multi-profession Festive picks.
 
-Both are signed standalone production builds for Android 7.0+ (minimum SDK 24), containing both `armeabi-v7a` and `arm64-v8a`. Native Mapbox, Cashfree, notifications, image manipulation and role-specific background-location support were checked. Original signing certificates and 16 KB alignment are preserved.
+TypeScript and 157 mobile tests passed. Signatures, native modules, original logo, 32-bit and 64-bit ARM support, production bundles and 16 KB alignment were checked. Physical-device installation and runtime testing remain unverified.
 
-These builds include the single-C-and-dot logo in the app, splash, launcher and notification icon, copyright and creator credits, keyboard-aware forms, and prior dashboard/profile updates. Asset optimization and R8 shrinking reduced APK size by approximately 51% without removing a phone architecture.
+[Release validation](../previews/mobile-admin-release-validation.json)
 
-TypeScript and 139 mobile tests pass. Both iOS JavaScript exports pass. These checks do not establish physical-device, live-payment or native iOS runtime behavior; the latest APKs have not been tested on a phone.
-
-[Full validation record](../previews/optimized-release-validation.json)
+Circle Admin installs separately. Sign in with the approved email `chetan.reddy@cclabs.space`, verify ownership, then upload a banner and select professions/services under **Festive picks**. The selected cards appear in the customer app within 30 seconds while open. It packages the panel and requires no localhost server. Native OAuth and file-picker behavior have not yet been checked on a physical phone.

@@ -1,0 +1,75 @@
+{
+  "validatedOn": "2026-10-20",
+  "reason": "Regenerated after reported crash; device/logs were unavailable",
+  "crashCauseConfirmed": false,
+  "crashResolutionConfirmed": false,
+  "codeShrinking": false,
+  "resourceShrinking": false,
+  "nativeLibrariesCompressed": true,
+  "nativeLibraryExtractionVerified": true,
+  "packageIdsUnchanged": true,
+  "signingKeysUnchanged": true,
+  "higherVersionCodes": true,
+  "upgradeCompatibilityVerifiedAgainstPriorAPKs": true,
+  "phoneInstallationTested": false,
+  "logo": {
+    "kept": "inner C",
+    "removed": "outer C",
+    "dotPlacement": "A - in the opening",
+    "dotCenter": [
+      78,
+      60
+    ],
+    "dotRadius": 4.5,
+    "verifiedIn": [
+      "shared app header",
+      "native launcher",
+      "native notification icon",
+      "splash artwork"
+    ]
+  },
+  "mobileTestsPassed": 139,
+  "typescriptPassed": true,
+  "iosJavaScriptExportsPassed": true,
+  "physicalDeviceTested": false,
+  "apks": [
+    {
+      "variant": "customer",
+      "package": "com.cccircle.customer",
+      "version": "0.1.11",
+      "versionCode": 12,
+      "file": "Circle-Customer.apk",
+      "versionedFile": "Circle-Customer-0.1.11.apk",
+      "bytes": 55910198,
+      "sizeMB": 55.91,
+      "sha256": "c793c754ca9367a02e5f03161335e013b1d92a52d980341fd7cecafcff4e0e88",
+      "certificateSha256": "e06c461eb7d0ff13a24760c7257d7b7142b3ed087dce9ede0b51589a7ea79824",
+      "updatesPriorRelease": "0.1.10",
+      "signatureVerified": true,
+      "aligned16KB": true,
+      "architectures": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ]
+    },
+    {
+      "variant": "professional",
+      "package": "com.cccircle.professional",
+      "version": "0.1.16",
+      "versionCode": 17,
+      "file": "Circle-Professional.apk",
+      "versionedFile": "Circle-Professional-0.1.16.apk",
+      "bytes": 55910082,
+      "sizeMB": 55.91,
+      "sha256": "6a03f42f48747743b58d50adf011bd1fc21aabedd6e5fd993d365fd0057610a7",
+      "certificateSha256": "04125e1a6805a7ae446fecf18aab6b760041a08aa00208bdceadcfdaa74fb22d",
+      "updatesPriorRelease": "0.1.15",
+      "signatureVerified": true,
+      "aligned16KB": true,
+      "architectures": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ]
+    }
+  ]
+}

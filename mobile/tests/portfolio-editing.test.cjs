@@ -11,7 +11,7 @@ function mount(file, props, mocks) {
   const ui = { useTheme: () => ({ styles: new Proxy({}, { get: () => ({}) }), colors: { panel: '#fff', text: '#000', line: '#ddd' } }), ...Object.fromEntries(['Button', 'Icon', 'Notice', 'TextButton', 'Card'].map(name => [name, name])) };
   const native = Object.fromEntries(['Image', 'Modal', 'Pressable', 'ScrollView', 'Text', 'View'].map(name => [name, name]));
   const code = ts.transpileModule(fs.readFileSync(require.resolve(file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { exports, Date, Map, require: name => mocks[name] || (name === 'react' ? { useState: state, useRef: initial => state({ current: initial })[0] } : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'Fragment' } : name === 'react-native' ? native : name === '../ui' ? ui : name === '../domain' ? { errorText: e => e.message } : {}) });
+  vm.runInNewContext(code, { exports, Date, Map, require: name => mocks[name] || (name === '../lib/mediaUrl' ? { mediaUrlIsFresh: () => true } : name === 'react' ? { useState: state, useRef: initial => state({ current: initial })[0] } : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'Fragment' } : name === 'react-native' ? native : name === '../ui' ? ui : name === '../domain' ? { errorText: e => e.message } : {}) });
   const component = exports[Object.keys(exports)[0]];
   function render() { cursor = 0; return component(props); }
   function nodes(tree) { if (!tree || typeof tree !== 'object') return []; if (Array.isArray(tree)) return tree.flatMap(nodes); if (tree.type === 'Modal' && !tree.props.visible) return []; return [tree, ...nodes(tree.props?.children)]; }
@@ -53,4 +53,16 @@ test('profile reviews show two comments and View more opens the dedicated review
   const view = mount('../src/components/ProfessionalReviews.tsx', { professionalId: 'pro', onViewAll: () => { opened++; } }, { '../hooks': { useResource: (_load, _key, namespace) => ({ data: namespace === 'professional-reviews' ? { count: 24, average: 5, reviews: rows } : [], error: '', loading: false }), useForegroundRefresh: () => {} } });
   assert.equal(view.nodes().filter(n => n.type === 'Text' && /^Review /.test(n.props.children)).length, 2);
   view.press('View more'); assert.equal(opened, 1);
+});
+
+test('a failed work image can recover to a fresh URL without hiding the other samples', async () => {
+  const view = gallery(async () => {});
+  const image = view.nodes().find(node => node.type === 'Image');
+  image.props.onError();
+  assert.equal(view.images().length, 3);
+  view.data.media[0].src = 'https://example.test/a?signature=renewed';
+  await view.press('Retry work images');
+  assert.equal(view.images()[0], 'https://example.test/a?signature=renewed');
+  view.nodes().find(node => node.type === 'Image').props.onLoad();
+  assert.equal(view.nodes().some(node => node.props.title === 'Retry work images'), false);
 });

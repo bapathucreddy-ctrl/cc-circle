@@ -88,15 +88,15 @@ export function BrandMark({ size = 32, color }: { size?: number; color?: string 
   const { colors } = useTheme();
   return <Image accessibilityLabel="Circle logo" source={require('../assets/brand/mark-black.png')} style={{ width: size, height: size, tintColor: color || colors.text }} resizeMode="contain" />;
 }
-export function Brand({ compact = false, stacked = false, onAccent = false }: { compact?: boolean; stacked?: boolean; onAccent?: boolean }) {
+export function Brand({ compact = false, stacked = false, onAccent = false, foregroundColor }: { compact?: boolean; stacked?: boolean; onAccent?: boolean; foregroundColor?: string }) {
   const { colors } = useTheme();
   if (stacked) return <View testID="brand-lockup" style={{ alignItems: 'flex-start', gap: 0 }}>
-    <View style={{ width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}><BrandMark size={62} color={onAccent ? '#ffffff' : undefined} /></View>
-    <Text style={{ fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -1.2, color: onAccent ? '#fff' : colors.text, marginTop: 16 }}>{brandCopy.name}</Text>
+    <View style={{ width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}><BrandMark size={62} color={foregroundColor || (onAccent ? '#ffffff' : undefined)} /></View>
+    <Text style={{ fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -1.2, color: foregroundColor || (onAccent ? '#fff' : colors.text), marginTop: 16 }}>{brandCopy.name}</Text>
     <Text style={{ fontSize: 10, lineHeight: 17, letterSpacing: 2, color: onAccent ? '#ffffffdd' : colors.muted, marginTop: 6 }}>{brandCopy.tagline}</Text>
     <Text style={{ fontSize: 9, lineHeight: 15, letterSpacing: 1.5, color: onAccent ? '#ffffffcc' : colors.muted, marginTop: 5 }}>{brandCopy.footer}</Text>
   </View>;
-  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><BrandMark size={36} color={onAccent ? '#ffffff' : undefined} />{!compact && <Text style={{ fontSize: 19, fontWeight: '700', letterSpacing: -.6, color: onAccent ? '#ffffff' : colors.text }}>{brandCopy.name}</Text>}</View>;
+  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><BrandMark size={36} color={foregroundColor || (onAccent ? '#ffffff' : undefined)} />{!compact && <Text style={{ fontSize: 19, fontWeight: '700', letterSpacing: -.6, color: foregroundColor || (onAccent ? '#ffffff' : colors.text) }}>{brandCopy.name}</Text>}</View>;
 }
 export function Button({ title, onPress, secondary = false, disabled = false, busy = false, icon }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean; busy?: boolean; icon?: IconName }) {
   const { styles, colors } = useTheme();

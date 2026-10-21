@@ -1,3 +1,4 @@
+import { SavedProfessionals } from './src/screens/SavedProfessionals';
 import { AppFooter } from './src/components/AppFooter';
 import { ServiceLoader as ActivityIndicator } from './src/components/ServiceLoader';
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react';
@@ -10,7 +11,7 @@ import { Brand, Button, Icon, IconButton, Notice, ThemeProvider, ThemeToggle, us
 import { Auth } from './src/screens/Auth';
 import { BookingForm, Bookings, Comparison, Discover, Home, Profile } from './src/screens/Marketplace';
 import { ProfessionalReviewsScreen } from './src/components/ProfessionalReviews';
-import { seasonalHomeColor } from './src/components/OccasionBanners';
+import { campaignForeground, seasonalHomeColor } from './src/lib/campaignColors';
 import { CraftServices } from './src/screens/CraftServices';
 import { BookingDetail } from './src/screens/BookingDetail';
 import { Account } from './src/screens/Account';
@@ -37,7 +38,7 @@ type Route = { screen: 'home' | 'bookings' | 'account' | 'saved' | 'compare' | '
   | { screen: 'reviews'; professionalId: string }
   | { screen: 'craft-services'; category: Professional['category']; now?: boolean }
   | { screen: 'profile'; person: Professional; serviceKey?: string } | { screen: 'booking'; service: Service; person: Professional } | { screen: 'detail'; booking: Booking };
-function Marketplace({ userId, notificationTarget, onHomeChange }: { userId: string; notificationTarget?: NotificationTarget; onHomeChange: (active: boolean) => void }) {
+function Marketplace({ userId, notificationTarget, onHomeChange, onBannerColorChange }: { onBannerColorChange: (color: string) => void; userId: string; notificationTarget?: NotificationTarget; onHomeChange: (active: boolean) => void }) {
   const [activityVersion, setActivityVersion] = useState(0);
   const [reviewedBookingIds, setReviewedBookingIds] = useState<string[]>([]);
   const { styles, colors } = useTheme();
@@ -77,11 +78,12 @@ function Marketplace({ userId, notificationTarget, onHomeChange }: { userId: str
   }
   let screen: ReactNode;
   switch (route.screen) {
-    case 'home': screen = <Home center={center} setCenter={setCenter} locationLabel={locationLabel} onLocationChange={changeLocation} onDiscover={(category, now, query, serviceKey) => category && !query && !serviceKey ? navigate({ screen: 'craft-services', category, now }) : navigate({ screen: 'discover', category, now, query, serviceKey })} onRequest={() => reset({ screen: 'request' })} onBooking={booking => navigate({ screen: 'detail', booking })} onBookings={() => reset({ screen: 'bookings' })} />; break;
+    case 'home': screen = <Home onBannerColorChange={onBannerColorChange} center={center} setCenter={setCenter} locationLabel={locationLabel} onLocationChange={changeLocation} onDiscover={(category, now, query, serviceKey) => category && !query && !serviceKey ? navigate({ screen: 'craft-services', category, now }) : navigate({ screen: 'discover', category, now, query, serviceKey })} onRequest={() => reset({ screen: 'request' })} onBooking={booking => navigate({ screen: 'detail', booking })} onBookings={() => reset({ screen: 'bookings' })} />; break;
     case 'craft-services': screen = <CraftServices category={route.category} center={center} availableNow={route.now ?? true} onChoose={serviceKey => navigate({ screen: 'discover', category: route.category, now: route.now, serviceKey })} />; break;
-    case 'discover': case 'saved': screen = <Discover userId={userId} center={center} setCenter={setCenter} locationLabel={locationLabel} onLocationChange={changeLocation} shortlist={shortlist} toggleCompare={compare} onCompare={() => navigate({ screen: 'compare' })}
-      initialCategory={route.screen === 'discover' ? route.category : undefined} initialNow={route.screen === 'discover' ? (route.now ?? true) : false} initialQuery={route.screen === 'discover' ? route.query : ''}
-      serviceKey={route.screen === 'discover' ? route.serviceKey : undefined} savedOnly={route.screen === 'saved'} onProfile={person => navigate({ screen: 'profile', person, serviceKey: route.screen === 'discover' ? route.serviceKey : undefined })} />; break;
+    case 'discover': screen = <Discover userId={userId} center={center} setCenter={setCenter} locationLabel={locationLabel} onLocationChange={changeLocation} shortlist={shortlist} toggleCompare={compare} onCompare={() => navigate({ screen: 'compare' })}
+      initialCategory={route.category} initialNow={route.now ?? true} initialQuery={route.query}
+      serviceKey={route.serviceKey} onProfile={person => navigate({ screen: 'profile', person, serviceKey: route.serviceKey })} />; break;
+    case 'saved': screen = <SavedProfessionals userId={userId} onProfile={person => navigate({ screen: 'profile', person })} />; break;
     case 'reviews': screen = <ProfessionalReviewsScreen professionalId={route.professionalId} />; break;
     case 'profile': screen = <Profile onReviews={() => navigate({ screen: 'reviews', professionalId: route.person.id })} preferredServiceKey={route.serviceKey} person={route.person} userId={userId} selectedForCompare={shortlist.some(p => p.id === route.person.id)} onCompare={() => compare(route.person)} onBook={service => navigate({ screen: 'booking', service, person: route.person })} />; break;
     case 'booking': screen = <BookingForm service={route.service} person={route.person} center={center} onManageProfile={() => navigate({ screen: 'account' })} onCreated={booking => reset({ screen: 'detail', booking })} />; break;
@@ -92,14 +94,15 @@ function Marketplace({ userId, notificationTarget, onHomeChange }: { userId: str
     case 'account': screen = <Account userId={userId} onJoin={() => {}} onSaved={() => navigate({ screen: 'saved' })} onBookings={() => reset({ screen: 'bookings' })} />; break;
   }
   const activeTab = ['profile', 'booking', 'compare', 'saved', 'craft-services', 'reviews'].includes(route.screen) ? 'discover' : route.screen === 'detail' ? 'bookings' : route.screen;
+  const mapScreen = ['discover', 'saved', 'booking', 'detail'].includes(route.screen);
   return <View style={styles.page}>
-    {route.screen !== 'home' && <View style={[styles.between, { paddingHorizontal: 24, paddingVertical: 12, maxWidth: 1080, width: '100%', alignSelf: 'center' }]}>
+    {route.screen !== 'home' && <View pointerEvents="box-none" style={[styles.between, { paddingHorizontal: 16, paddingVertical: 10, maxWidth: 1080, width: '100%', alignSelf: 'center' }, mapScreen && { position: 'absolute', top: 0, zIndex: 10 }]}>
       <IconButton name="back" label="Back" onPress={() => routes.length > 1 ? setRoutes(previous => previous.slice(0, -1)) : reset({ screen: 'home' })} /><View style={styles.row}><NotificationBell /><ThemeToggle /></View>
     </View>}
     {Boolean(error) && <View style={{ paddingHorizontal: 22 }}><Notice message={error} /></View>}
     {Boolean(locationError) && <View style={{ paddingHorizontal: 22 }}><Notice message={locationError} /></View>}
     <View key={JSON.stringify(route)} style={{ flex: 1 }}>{screen}</View>
-    <CustomerActivityDock userId={userId} currentBookingId={route.screen === 'detail' ? route.booking.id : undefined} refreshVersion={activityVersion} reviewedBookingIds={reviewedBookingIds} onOpen={booking => navigate({ screen: 'detail', booking })} />
+    <CustomerActivityDock userId={userId} hideReviewReminder={route.screen === 'discover'} currentBookingId={route.screen === 'detail' ? route.booking.id : undefined} refreshVersion={activityVersion} reviewedBookingIds={reviewedBookingIds} onOpen={booking => navigate({ screen: 'detail', booking })} />
     <View style={{ flexDirection: 'row', justifyContent: 'space-around', backgroundColor: colors.panel, borderTopWidth: 1, borderColor: colors.line, paddingVertical: 8 }}>
       {([['home', 'Home', 'home'], ['discover', 'Discover', 'search'], ['request', 'Request', 'plus'], ['bookings', 'Bookings', 'calendar'], ['account', 'Circle', 'user']] as const).map(([id, label, icon]) =>
         <Pressable key={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: activeTab === id }} onPress={() => reset({ screen: id })} style={{ flex: 1, maxWidth: 160, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 5 }}><View style={{ backgroundColor: activeTab === id ? colors.selected : 'transparent', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 }}><Icon name={icon} color={activeTab === id ? colors.accent : colors.muted} /></View><Text style={{ fontSize: 10, color: activeTab === id ? colors.accent : colors.muted, fontWeight: '500' }}>{label}</Text></Pressable>)}
@@ -117,12 +120,13 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: bool
 }
 
 export default function App() { return <ThemeProvider><Application /></ThemeProvider>; }
-function HomeSafeAreaColor({ active }: { active: boolean }) {
+function HomeSafeAreaColor({ active, color }: { active: boolean; color: string }) {
   const insets = useSafeAreaInsets();
-  return active ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: seasonalHomeColor }} /> : null;
+  return active ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: color }} /> : null;
 }
 function Application() {
   const [homeChrome, setHomeChrome] = useState(false);
+  const [homeBannerColor, setHomeBannerColor] = useState(seasonalHomeColor);
   // Native launch is an unbranded matching background; this is the single logo reveal.
   const [splashVisible, setSplashVisible] = useState(true);
   const [layoutReady, setLayoutReady] = useState(false);
@@ -158,14 +162,14 @@ function Application() {
       void SplashScreen.hideAsync().catch(() => {});
     }
   }, [layoutReady]);
-  return <SafeAreaProvider><SafeAreaView style={styles.page} onLayout={() => setLayoutReady(true)}><StatusBar barStyle={homeChrome && session && !splashVisible || mode === 'dark' ? 'light-content' : 'dark-content'} />
+  return <SafeAreaProvider><SafeAreaView style={styles.page} onLayout={() => setLayoutReady(true)}><StatusBar barStyle={homeChrome && session && !splashVisible ? campaignForeground(homeBannerColor) === '#17201D' ? 'dark-content' : 'light-content' : mode === 'dark' ? 'light-content' : 'dark-content'} />
     <AppErrorBoundary><KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {!backendConfigured ? <View style={[styles.content, { flex: 1, justifyContent: 'center' }]}><Brand />
         <Text style={styles.text}>The app is awaiting its service configuration.</Text><Text style={styles.muted}>Connect the Supabase project and Mapbox token, then rebuild the development app.</Text></View>
         : loading ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator color={colors.accent} /></View>
-        : session ? <SessionGate key={session.user.id + ':' + appSessionId(session.access_token)} onReplaced={() => { void sessionReplaced(appSessionId(session.access_token)); }}><NotificationCenter key={session.user.id} userId={session.user.id} onNavigate={setNotificationTarget}><RegistrationGate userId={session.user.id}>{isProfessionalApp ? <ProfessionalWorkspace userId={session.user.id} initialScreen={intent} notificationTarget={notificationTarget} /> : <Marketplace key={session.user.id} userId={session.user.id} notificationTarget={notificationTarget} onHomeChange={setHomeChrome} />}</RegistrationGate></NotificationCenter></SessionGate> : <><Notice message={error} /><Auth onIntent={setIntent} /></>}
+        : session ? <SessionGate key={session.user.id + ':' + appSessionId(session.access_token)} onReplaced={() => { void sessionReplaced(appSessionId(session.access_token)); }}><NotificationCenter key={session.user.id} userId={session.user.id} onNavigate={setNotificationTarget}><RegistrationGate userId={session.user.id}>{isProfessionalApp ? <ProfessionalWorkspace userId={session.user.id} initialScreen={intent} notificationTarget={notificationTarget} /> : <Marketplace key={session.user.id} userId={session.user.id} notificationTarget={notificationTarget} onHomeChange={setHomeChrome} onBannerColorChange={setHomeBannerColor} />}</RegistrationGate></NotificationCenter></SessionGate> : <><Notice message={error} /><Auth onIntent={setIntent} /></>}
       <AppFooter />
     </KeyboardAvoidingView></AppErrorBoundary>
     {splashVisible && <LaunchSplash ready={layoutReady} onFinish={finishSplash} />}
-  </SafeAreaView><HomeSafeAreaColor active={homeChrome && Boolean(session) && !splashVisible} /></SafeAreaProvider>;
+  </SafeAreaView><HomeSafeAreaColor color={homeBannerColor} active={homeChrome && Boolean(session) && !splashVisible} /></SafeAreaProvider>;
 }

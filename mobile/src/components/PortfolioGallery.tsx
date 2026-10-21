@@ -5,6 +5,7 @@ import { loadPortfolio, type PortfolioMedia } from '../lib/portfolio';
 import { useForegroundRefresh, useResource } from '../hooks';
 import { Button, Icon, Notice, TextButton, useTheme } from '../ui';
 import { PortfolioPlayer } from './PortfolioPlayer';
+import { mediaUrlIsFresh } from '../lib/mediaUrl';
 
 export function PortfolioGallery({ professionalId, editable = false, onDelete, onAdd, adding = false }: { professionalId: string; editable?: boolean; onDelete?: (ids: string[]) => Promise<void>; onAdd?: () => void; adding?: boolean }) {
   const { styles, colors } = useTheme();
@@ -16,12 +17,21 @@ export function PortfolioGallery({ professionalId, editable = false, onDelete, o
   const [deleting, setDeleting] = useState(false); const [error, setError] = useState('');
   // Signed URLs rotate on refresh. Preserve URLs for photos already on screen.
   const sources = useRef(new Map<string, { uri: string; at: number }>());
+  const attempted = useRef(new Set<string>());
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+  const [imageRevision, setImageRevision] = useState(0);
   function imageUri(item: PortfolioMedia) {
     const uri = item.preview || item.src || ''; const key = `${professionalId}:${item.id}`;
     const old = sources.current.get(key);
-    if (old && Date.now() - old.at < 12 * 60000) return old.uri;
+    if (old && Date.now() - old.at < 12 * 60000 && mediaUrlIsFresh(old.uri)) return old.uri;
     sources.current.set(key, { uri, at: Date.now() }); return uri;
   }
+  function imageFailed(item: PortfolioMedia) {
+    setFailedImages(previous => previous.includes(item.id) ? previous : [...previous, item.id]);
+    sources.current.delete(`${professionalId}:${item.id}`);
+    if (!attempted.current.has(item.id)) { attempted.current.add(item.id); void result.refresh(); }
+  }
+  async function retryImages() { sources.current.clear(); attempted.current.clear(); await result.refresh(); setImageRevision(value => value + 1); }
   async function removeSelected() {
     if (!onDelete || deleting || adding || !checked.length) return;
     setDeleting(true); setError('');
@@ -34,12 +44,14 @@ export function PortfolioGallery({ professionalId, editable = false, onDelete, o
   return <View style={{ gap: 14 }}>
     <View style={styles.between}><Text style={styles.heading}>Work samples</Text><View style={styles.row}><Text style={styles.muted}>{media.length}/10</Text>{editable && <TextButton title={removing ? 'Cancel' : 'Edit'} disabled={adding || deleting} onPress={() => { setError(''); if (removing) { setRemoving(false); setChecked([]); } else setMenu(true); }} />}</View></View>
     <Notice message={error || result.error} />
+    {(result.error || failedImages.length > 0) && <Button title="Retry work images" secondary onPress={retryImages} />}
     {result.loading && !result.data && <Text style={styles.muted}>Loading work samples…</Text>}
     {!result.loading && !result.error && !media.length && <Text style={styles.muted}>{editable ? 'Add your first work sample.' : 'No work samples yet.'}</Text>}
     {removing && <View style={styles.between}><Text style={styles.muted}>Select samples to remove</Text><Text style={styles.text}>{selectedIds.length} selected</Text></View>}
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3 }}>{media.map((item, index) => <View key={item.id} style={{ width: '32.6%', gap: 3 }}>
       <Pressable accessibilityRole={removing ? 'checkbox' : 'button'} accessibilityState={removing ? { checked: selectedIds.includes(item.id), disabled: adding || deleting } : undefined} accessibilityLabel={`${removing ? 'Select' : 'View'} work sample ${index + 1}`} disabled={adding || deleting} onPress={() => removing ? setChecked(previous => previous.includes(item.id) ? previous.filter(id => id !== item.id) : [...previous, item.id]) : setSelected(item)} style={{ aspectRatio: 1, backgroundColor: colors.input, borderRadius: 3, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-        {item.preview || item.kind === 'image' && item.src ? <Image source={{ uri: imageUri(item) }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Icon name="arrow" size={28} color={colors.text} />}
+        {item.preview || item.kind === 'image' && item.src ? <Image key={imageRevision} source={{ uri: imageUri(item) }} onError={() => imageFailed(item)} onLoad={() => setFailedImages(previous => previous.filter(id => id !== item.id))} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Icon name="arrow" size={28} color={colors.text} />}
+        {failedImages.includes(item.id) && <View pointerEvents="none" style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.input }}><Text style={[styles.muted, { fontSize: 11 }]}>Image unavailable</Text></View>}
         {item.kind !== 'image' && <View style={{ position: 'absolute', backgroundColor: '#000b', borderRadius: 22, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#fff', fontSize: 22 }}>▶</Text></View>}
         {removing && <View style={{ position: 'absolute', top: 7, right: 7, width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#fff', backgroundColor: selectedIds.includes(item.id) ? '#111' : '#0005', alignItems: 'center', justifyContent: 'center' }}>{selectedIds.includes(item.id) && <Text style={{ color: '#fff', fontWeight: '700' }}>✓</Text>}</View>}
       </Pressable>

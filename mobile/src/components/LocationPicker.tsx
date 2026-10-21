@@ -8,7 +8,7 @@ import { currentLocation } from '../lib/currentLocation';
 import { coordinateLocationLabel, deviceLocationLabel, type DeviceLocationSource } from '../lib/deviceLocation';
 import { searchLocations, resolveLocation, type LocationResult } from '../lib/locationSearch';
 import { Button, Field, Icon, IconButton, Notice, useTheme } from '../ui';
-import { TalentMap } from './TalentMap';
+import { MapExperience } from './MapExperience';
 import { createRequestId } from '../lib/requestId';
 
 export function LocationPicker({ center, label, onSelect, compact = false, foregroundColor }: { center: Coordinate; label: string; onSelect: (point: Coordinate, label: string, source?: DeviceLocationSource) => void; compact?: boolean; foregroundColor?: string }) {
@@ -68,18 +68,16 @@ export function LocationPicker({ center, label, onSelect, compact = false, foreg
   }
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel="Change location" onPress={() => { sessionToken.current = createRequestId(); setOpen(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: compact ? 7 : 10, paddingVertical: compact ? 4 : 8, minHeight: compact ? 44 : 48 }}><Icon name="pin" size={compact ? 17 : 20} color={foregroundColor || colors.accent} /><View style={{ flex: 1, gap: 4 }}><Text numberOfLines={1} style={[styles.text, compact && { fontSize: 12, lineHeight: 18 }, foregroundColor ? { color: foregroundColor } : undefined]}>{label}</Text>{!compact && <Text style={{ color: foregroundColor || colors.accent, fontSize: 12 }}>Change location</Text>}</View><Icon name="chevron" size={compact ? 15 : 20} color={foregroundColor || colors.muted} /></Pressable>
-    <Modal visible={open} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS==='android'?'height':undefined} style={{ flex: 1, backgroundColor: colors.panel, maxHeight:viewportHeight }}><SafeAreaView style={{flex:1,width:'100%',maxWidth:680,alignSelf:'center'}}>
+    <Modal visible={open} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS==='android'?'height':undefined} style={{ flex: 1, backgroundColor: colors.panel, maxHeight:viewportHeight }}><SafeAreaView style={{flex:1,width:'100%',maxWidth:mapOpen?undefined:680,alignSelf:'center'}}>
       <View style={[styles.between,{paddingHorizontal:22,paddingVertical:12,flexShrink:0}]}><Text style={styles.heading}>Choose your location</Text><IconButton name="close" label="Close location search" onPress={close} /></View>
       {!mapOpen&&<View style={{paddingHorizontal:22,paddingBottom:12,flexShrink:0}}><Field label="Search location" value={query} onChange={value => { cancelSelection(); setQuery(value); }} maxLength={256} autoFocus autoCapitalize="words" placeholder="Hotel, apartment, street or area in India" /><Notice message={error}/></View>}
-      <ScrollView testID="location-search-results" style={{flex:1}} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ gap: 16,paddingHorizontal:22,paddingBottom:24 }}>
-      {mapOpen ? <>
-        <Text style={styles.muted}>Tap the exact entrance or meeting point. You can name a hotel or apartment even when it is missing from search.</Text>
-        <TalentMap center={pin} onChooseLocation={setPin} height={300} label="Choose the entrance" />
+      {mapOpen ? <MapExperience title="Choose the entrance" map={{center:pin,onChooseLocation:setPin,centerIsLocation:true}}
+        footer={<Button title="Use this map pin" onPress={() => choose(pin, pinName.trim() || coordinateLocationLabel(pin))} />}>
+        <Text style={styles.muted}>Tap the entrance or meeting point.</Text>
         <Field label="Place or building name (optional)" value={pinName} onChange={setPinName} maxLength={200} placeholder="Apartment, hotel or meeting point" />
-        <Text style={[styles.muted, { fontSize: 11 }]}>Selected pin: {pin[1].toFixed(6)}, {pin[0].toFixed(6)}</Text>
-        <Button title="Use this map pin" onPress={() => choose(pin, pinName.trim() || coordinateLocationLabel(pin))} />
+        <Text style={[styles.muted,{fontSize:11}]}>Selected pin: {pin[1].toFixed(6)}, {pin[0].toFixed(6)}</Text>
         <Button title="Back to location search" secondary onPress={() => setMapOpen(false)} />
-      </> : <>
+      </MapExperience> : <ScrollView testID="location-search-results" style={{flex:1}} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{gap:16,paddingHorizontal:22,paddingBottom:24}}>
       <View style={{ gap: 8 }}>
         {busy && <ActivityIndicator accessibilityLabel="Searching Google Maps locations" color={colors.accent} />}
         {results.map(result => <Pressable key={result.id} accessibilityRole="button" accessibilityLabel={`Select location ${result.address}`} disabled={Boolean(resolving)} onPress={() => { void selectResult(result); }} style={{ paddingVertical: 14, borderBottomWidth: 1, borderColor: colors.line, gap: 5 }}><Text style={styles.text}>{result.name}</Text><Text style={styles.muted}>{result.address}</Text>{resolving === result.id && <ActivityIndicator accessibilityLabel="Locating selected place" color={colors.accent} />}</Pressable>)}
@@ -91,8 +89,8 @@ export function LocationPicker({ center, label, onSelect, compact = false, foreg
       <Text style={[styles.muted, { fontSize: 11 }]}>Some hotel and apartment names may be missing. Choose on map to set their exact location.</Text>
       <Text accessibilityLabel="Google Maps" style={{ color: colors.text, fontSize: 14, fontWeight: '400' }}>Google Maps</Text>
       <Text style={[styles.muted, { fontSize: 11 }]}>Check the selected pin before booking.</Text>
-      </>}
-      </ScrollView>
+</ScrollView>}
+
       <AppFooter />
     </SafeAreaView></KeyboardAvoidingView></Modal>
   </>;

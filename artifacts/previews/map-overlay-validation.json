@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-21",
+  "scope": "Immersive map and floating panels",
+  "surfaces": [
+    "customer discovery and saved professionals",
+    "customer booking location and confirmation",
+    "customer tracking",
+    "professional acceptance and journey navigation",
+    "event venue selection",
+    "professional service-area selection",
+    "location picker map mode"
+  ],
+  "features": {
+    "persistentBackgroundMap": true,
+    "draggableSheet": true,
+    "professionalCompare": true,
+    "selectedPinHighlightsCard": true,
+    "sideControls": [
+      "3D",
+      "Aerial",
+      "Dawn",
+      "Day",
+      "Dusk",
+      "Night",
+      "Recenter"
+    ],
+    "searchOnlyForDiscoveryAndLocationSelection": true,
+    "cameraReframesAfterDrag": true,
+    "attributionAboveSheet": true
+  },
+  "checks": {
+    "typescript": true,
+    "mobileTests": 144,
+    "customerWebExport": true,
+    "professionalWebExport": true,
+    "iosJavaScriptExport": true,
+    "physicalDeviceTested": false,
+    "newApksBuilt": false
+  }
+}

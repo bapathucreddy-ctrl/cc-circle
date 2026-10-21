@@ -19,6 +19,10 @@ test('customer and professional builds have distinct install identities and fixe
   assert.equal(customer.name, 'Circle'); assert.equal(pro.name, 'Circle');
   for (const key of ['slug', 'scheme']) assert.notEqual(customer[key], pro[key]);
   assert.notEqual(customer.android.package, pro.android.package);
+  assert.equal(customer.android.package, 'com.cccircle.customer');
+  assert.equal(pro.android.package, 'com.cccircle.professional');
+  assert.equal(customer.ios.bundleIdentifier, 'com.cccircle.customer');
+  assert.equal(pro.ios.bundleIdentifier, 'com.cccircle.professional');
   assert.notEqual(customer.ios.bundleIdentifier, pro.ios.bundleIdentifier);
   assert.equal(config(undefined).extra.appVariant, 'customer');
   assert.throws(() => config('combined'), /must be customer or professional/);
@@ -50,8 +54,8 @@ test('professional persisted location jobs declare the Android boot permission',
   const pro=config('professional'),customer=config('customer');
   assert.ok(pro.android.permissions.includes('RECEIVE_BOOT_COMPLETED'));
   assert.ok(!customer.android.permissions.includes('RECEIVE_BOOT_COMPLETED'));
-  assert.equal(pro.version,'0.1.15');assert.equal(pro.android.versionCode,16);
-  assert.equal(customer.version,'0.1.10');assert.equal(customer.android.versionCode,11);
+  assert.equal(pro.version,'0.1.19');assert.equal(pro.android.versionCode,20);
+  assert.equal(customer.version,'0.1.14');assert.equal(customer.android.versionCode,15);
 });
 
 test('Firebase configuration is optional and remains separate between app variants',()=>{

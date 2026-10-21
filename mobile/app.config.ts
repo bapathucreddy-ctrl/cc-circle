@@ -12,7 +12,7 @@ const config: ExpoConfig = {
   name,
   icon: professional ? './assets/brand/app-icon-professional.png' : './assets/brand/app-icon-customer.png',
   slug: professional ? 'circle-profession' : 'circle',
-  version: professional ? '0.1.15' : '0.1.10',
+  version: professional ? '0.1.19' : '0.1.14',
   orientation: 'portrait',
   scheme: professional ? 'cccircle-pro' : 'cccircle',
   extra: { appVariant: variant, androidPushConfigured: Boolean(googleServicesFile), iosPushConfigured, ...(easProjectId ? { eas: { projectId: easProjectId } } : {}) },
@@ -25,7 +25,7 @@ const config: ExpoConfig = {
       LSApplicationQueriesSchemes: ['phonepe', 'tez', 'paytm', 'paytmmp', 'bhim', 'upi', 'comgooglemaps'],
     },
   },
-  android: { softwareKeyboardLayoutMode: 'resize', package: professional ? 'com.cccircle.professional' : 'com.cccircle.customer', versionCode: professional ? 16 : 11,
+  android: { softwareKeyboardLayoutMode: 'resize', package: professional ? 'com.cccircle.professional' : 'com.cccircle.customer', versionCode: professional ? 20 : 15,
     ...(googleServicesFile ? { googleServicesFile } : {}),
     permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', ...(professional ? ['RECEIVE_BOOT_COMPLETED'] : [])] },
   plugins: [

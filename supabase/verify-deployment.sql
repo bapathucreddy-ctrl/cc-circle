@@ -18,12 +18,18 @@ begin
   end if;
   foreach expected_version in array array[
     '202610080000','202610080001','202610080002','202610080003',
-    '202610080004','202610080005','202610080006','202610080007','202610150001','202610150002','202610150003','202610150004','202610150005','202610150006','202610160001','202610160002','202610160003','202610160004','202610160005','202610160006','202610160007','202610160008','202610160009','202610160010','202610170001','202610170002','202610180001','202610180002','202610180003','202610180004'
+    '202610080004','202610080005','202610080006','202610080007','202610150001','202610150002','202610150003','202610150004','202610150005','202610150006','202610160001','202610160002','202610160003','202610160004','202610160005','202610160006','202610160007','202610160008','202610160009','202610160010','202610170001','202610170002','202610180001','202610180002','202610180003','202610180004','202610210001','202610210002'
   ] loop
     if not exists(select 1 from supabase_migrations.schema_migrations where version=expected_version) then
       raise exception 'Deployment incomplete: migration % is missing.', expected_version;
     end if;
   end loop;
+  if to_regclass('private.banner_admins') is null or
+    has_table_privilege('authenticated','private.banner_admins','SELECT') or
+    has_function_privilege('authenticated','public.grant_banner_admin(text)','EXECUTE') or
+    has_function_privilege('anon','public.is_banner_admin()','EXECUTE') then
+    raise exception 'Deployment incomplete: banner-admin access protection is missing.';
+  end if;
   if has_table_privilege('authenticated','private.professional_usernames','SELECT')
     or has_function_privilege('authenticated','private.professional_username(uuid)','EXECUTE')
     or has_function_privilege('anon','public.professional_review_page(uuid,integer,integer)','EXECUTE')
@@ -41,7 +47,8 @@ begin
   end if;
   if exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname in ('public','private') and p.prokind='f' and p.prosrc like '%auth.uid()%'
-    and p.proname not in ('current_user_id','activate_app_session','app_session_is_current','release_app_session','app_session_allowed')) then
+    -- Banner admins use a separate verified-email session; the trigger only records its actor.
+    and p.proname not in ('current_user_id','activate_app_session','app_session_is_current','release_app_session','app_session_allowed','is_banner_admin','validate_home_banner')) then
     raise exception 'Deployment incomplete: a user function bypasses session replacement checks.';
   end if;
   if to_regprocedure('public.register_ios_notification_device(text,uuid,text,text)') is null

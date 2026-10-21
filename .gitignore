@@ -17,6 +17,11 @@ GoogleService-Info.plist
 
 # Dependencies, caches, and compiled downloads
 node_modules/
+admin/dist/
+admin/android/.gradle/
+admin/android/build/
+admin/android/app/build/
+admin/android/local.properties
 .expo/
 .local-build/
 *.log
