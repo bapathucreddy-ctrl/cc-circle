@@ -6,7 +6,9 @@ export async function portfolioAction<T>(action: string, input: Record<string, u
   if (error) {
     let message = 'Unable to update your portfolio. Please try again.';
     try { const response = await error.context?.json(); if (typeof response?.error === 'string') message = response.error; } catch { /* No provider details are exposed. */ }
-    throw new Error(message);
+    const status = error.context?.status;
+    if (status === 403 && message === 'Unable to update your portfolio. Please try again.') message = 'Portfolio access was denied. Sign in again; if it continues, contact support.';
+    throw new Error(message + (typeof status === 'number' ? ` (HTTP ${status})` : ''));
   }
   return data as T;
 }

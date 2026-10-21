@@ -1,0 +1,59 @@
+{
+  "validatedOn": "2026-10-19",
+  "target": "70-90 MB APK download files",
+  "achieved": true,
+  "method": [
+    "Right-size opaque photographs and encode high-quality JPEG",
+    "Retain transparent craft/rider artwork as smaller PNG",
+    "Enable R8 release code and resource shrinking",
+    "Preserve Metro image keep rules and both ARM phone architectures"
+  ],
+  "singleCAndDotLogoVerified": [
+    "app headers",
+    "native launcher",
+    "native notification icon",
+    "animated splash artwork"
+  ],
+  "keyboardAwareFormsIncluded": true,
+  "copyright": "The Vivaha Stories",
+  "createdBy": "C C Creative Labs",
+  "mobileTestsPassed": 139,
+  "typescriptPassed": true,
+  "androidNativeBuildsPassed": true,
+  "iosJavaScriptExportsPassed": true,
+  "physicalDeviceTested": false,
+  "apks": [
+    {
+      "variant": "customer",
+      "version": "0.1.10",
+      "versionCode": 11,
+      "file": "Circle-Customer.apk",
+      "bytes": 82957137,
+      "sizeMB": 82.96,
+      "sha256": "8b714f5e69b3f4736fa80edf72705e0a90d3b209b0c464dad8532eccdd40c579",
+      "architectures": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ],
+      "minSdk": "24",
+      "signatureVerified": true,
+      "aligned16KB": true
+    },
+    {
+      "variant": "professional",
+      "version": "0.1.15",
+      "versionCode": 16,
+      "file": "Circle-Professional.apk",
+      "bytes": 82957241,
+      "sizeMB": 82.96,
+      "sha256": "011cae7bbc8e3f24e93fc5390d14d6535f10a0a6d7e0cc97450cda11dbaac283",
+      "architectures": [
+        "arm64-v8a",
+        "armeabi-v7a"
+      ],
+      "minSdk": "24",
+      "signatureVerified": true,
+      "aligned16KB": true
+    }
+  ]
+}

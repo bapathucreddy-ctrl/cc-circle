@@ -49,7 +49,7 @@ export function ProfessionalWorkspace({ userId, initialScreen, notificationTarge
   const open = (booking: Booking) => navigate({ screen: 'detail', booking });
   const activeTab = route.screen === 'detail' ? 'bookings' : ['join', 'reviews'].includes(route.screen) ? 'account' : route.screen;
   return <View style={styles.page}>
-    <View style={[styles.between, { paddingHorizontal: 24, paddingVertical: 12, maxWidth: 1080, width: '100%', alignSelf: 'center' }]}>
+    <View pointerEvents="box-none" style={[styles.between, { paddingHorizontal: 16, paddingVertical: 10, maxWidth: 1080, width: '100%', alignSelf: 'center' }, route.screen === 'detail' && { position: 'absolute', top: 0, zIndex: 10 }]}>
       {routes.length > 1 ? <IconButton name="back" label="Back" onPress={() => setRoutes(previous => previous.slice(0, -1))} /> : <Brand compact />}<View style={styles.row}><NotificationBell /><ThemeToggle /></View>
     </View>
     <Notice message={notificationError} />

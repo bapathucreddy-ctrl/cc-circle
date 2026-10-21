@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Circle · Banner studio</title><link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"></head><body>
+<header><div class="brand"><img src="/logo.svg" alt="Circle"><div><strong>Circle</strong><span>Banner studio</span></div></div><div class="account"><span id="account-label"></span><button id="sign-out" class="quiet" hidden>Sign out</button></div></header>
+<main>
+<section id="auth" class="auth panel"><span class="eyebrow">CIRCLE ADMIN</span><h1>Your next campaign starts here.</h1><p>Sign in with your approved Circle email to manage customer banners.</p>
+<button id="google-sign-in" type="button" class="secondary">Continue with Google</button><p>Or use your approved email. First sign-in creates your account.</p>
+<form id="login-form"><label>Email<input id="email" type="email" required autocomplete="email" placeholder="you@company.com"></label><button id="send-code" type="submit">Email sign-in link</button></form>
+<form id="code-form" hidden><label>Email code<input id="code" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="10" required placeholder="Enter your code"></label><button type="submit">Verify & continue</button><button id="change-email" class="quiet" type="button">Use another email</button></form>
+<p id="auth-notice" role="status" aria-live="polite"></p></section>
+<section id="denied" class="auth panel" hidden><h1>Admin access required</h1><p>This Circle account has not been approved to manage banners.</p><button id="switch-account">Use another account</button></section>
+<section id="workspace" hidden>
+<div class="page-heading"><div><span class="eyebrow">CUSTOMER APP</span><h1>Make the first impression.</h1><p>Upload finished artwork with its text included. What you see is what customers see.</p></div><button id="new-banner">＋ New banner</button></div>
+<div class="stats"><div><span>Live now</span><strong id="live-count">0</strong></div><div><span>Scheduled</span><strong id="scheduled-count">0</strong></div><div><span>Drafts & paused</span><strong id="draft-count">0</strong></div></div>
+<div id="notice" role="status" aria-live="polite"></div>
+<div class="studio"><section class="library panel"><div class="section-title"><h2>Your banners</h2><button id="refresh" class="quiet">Refresh</button></div><div id="banner-list"></div></section>
+<section id="editor" class="panel editor"><div class="section-title"><h2 id="editor-title">New banner</h2><span class="badge">Full image · no overlays</span></div>
+<form id="banner-form">
+<label class="upload">Banner artwork<input id="artwork" type="file" accept="image/png,image/jpeg,image/webp"><span>Choose JPG, PNG or WebP · up to 8 MB</span></label><p class="hint">Recommended: 1536 × 1024. Include your title and offer text in the image. The app shows the full artwork.</p>
+<div class="preview-layout"><div class="phone" id="phone-preview"><div class="phone-top"><img src="/logo.svg" alt=""><span>Circle customer preview</span></div><img id="artwork-preview" alt="Banner preview" hidden><div id="preview-empty">Your artwork appears here</div></div><div class="image-info"><label>Header colour<input id="background" type="color" value="#202020"></label><span id="image-details" class="hint">Auto-picked when you choose an image. Adjust if needed.</span></div></div>
+<label>Internal campaign name<input id="title" required maxlength="100" placeholder="Wedding season · October"></label><label>Image description<input id="description" maxlength="200" placeholder="Describe the image for screen readers"></label><p class="hint">These fields are for management and accessibility. The app adds no visible banner text.</p>
+<div class="two-columns"><label>Profession<select id="category"><option value="Makeup">Makeup artist</option><option value="Photographer">Photographer</option><option value="HairStylist">Hair stylist</option><option value="Editor">Editor</option><option value="ContentCreator">Content creator</option></select></label><label>Open this service<select id="service"><option value="">All services in this profession</option></select></label></div>
+<fieldset><legend>Festive picks</legend><p class="hint">Select multiple professions and choose a service for each card. Customers see these cards below this banner.</p><div id="featured-picks" class="featured-picks"></div></fieldset>
+<div class="two-columns"><label>Starts<input id="starts" type="datetime-local" required></label><label>Ends<input id="ends" type="datetime-local" required></label></div>
+<label>Priority<input id="priority" type="number" value="200" min="-1000" max="10000" required></label><p class="hint">The active banner with the highest priority appears first. Newer updates win a tie. Scheduled banners appear at their start time.</p>
+<div class="actions"><button id="save-draft" type="submit" name="action" value="draft" class="secondary">Save draft</button><button id="publish" type="submit" name="action" value="publish">Publish banner</button></div><p id="save-state" role="status" aria-live="polite"></p>
+</form></section></div></section>
+</main><footer>© 2026 The Vivaha Stories <span>Created by C C Creative Labs</span></footer><script type="module" src="/app.js"></script></body></html>

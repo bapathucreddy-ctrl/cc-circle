@@ -3,274 +3,274 @@
   "jobs": [
     {
       "key": "bridal-makeup",
-      "path": "mobile/assets/services/bridal-makeup.png",
+      "path": "mobile/assets/services/bridal-makeup.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian bride receiving elegant bridal makeup from a makeup artist, warm wedding preparation, graceful bridal jewellery and fresh makeup brushes."
     },
     {
       "key": "party-makeup",
-      "path": "mobile/assets/services/party-makeup.png",
+      "path": "mobile/assets/services/party-makeup.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian woman receiving a glamorous evening party makeup look, rich berry lipstick and shimmering eye makeup, artist brush visible."
     },
     {
       "key": "wedding-makeup",
-      "path": "mobile/assets/services/wedding-makeup.png",
+      "path": "mobile/assets/services/wedding-makeup.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian wedding guest having soft elegant makeup applied, pastel festive outfit, friendly makeup artist working."
     },
     {
       "key": "groom-makeup",
-      "path": "mobile/assets/services/groom-makeup.png",
+      "path": "mobile/assets/services/groom-makeup.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian groom having subtle professional face makeup applied before his wedding, cream sherwani, stylist hand with brush."
     },
     {
       "key": "general-makeup",
-      "path": "mobile/assets/services/general-makeup.png",
+      "path": "mobile/assets/services/general-makeup.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian woman receiving natural everyday makeup, fresh clean beauty look, minimal neutral outfit."
     },
     {
       "key": "festive-makeup",
-      "path": "mobile/assets/services/festive-makeup.png",
+      "path": "mobile/assets/services/festive-makeup.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian woman getting colourful Navratri festive makeup, cheerful emerald and fuchsia traditional outfit with tasteful jewellery."
     },
     {
       "key": "wedding-photography",
-      "path": "mobile/assets/services/wedding-photography.png",
+      "path": "mobile/assets/services/wedding-photography.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional photographer photographing an adult Indian wedding couple outdoors, colourful flowers, camera in foreground and couple in background."
     },
     {
       "key": "prewedding-photography",
-      "path": "mobile/assets/services/prewedding-photography.png",
+      "path": "mobile/assets/services/prewedding-photography.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian engaged couple posing for a pre-wedding photo shoot in a beautiful garden with a photographer framing them."
     },
     {
       "key": "event-photography",
-      "path": "mobile/assets/services/event-photography.png",
+      "path": "mobile/assets/services/event-photography.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional Indian event photographer with a camera documenting a colourful birthday celebration, festive lighting."
     },
     {
       "key": "portrait-photography",
-      "path": "mobile/assets/services/portrait-photography.png",
+      "path": "mobile/assets/services/portrait-photography.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian woman posing for a professional portrait shoot, photographer camera and softbox, elegant studio setting."
     },
     {
       "key": "product-photography",
-      "path": "mobile/assets/services/product-photography.png",
+      "path": "mobile/assets/services/product-photography.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional product photography setup with a camera, soft lights and beautiful unbranded skincare bottles on pastel pedestals."
     },
     {
       "key": "photo-editing",
-      "path": "mobile/assets/services/photo-editing.png",
+      "path": "mobile/assets/services/photo-editing.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian photo editor retouching a portrait photograph on a desktop display, clean creative workspace, no legible interface text."
     },
     {
       "key": "video-editing",
-      "path": "mobile/assets/services/video-editing.png",
+      "path": "mobile/assets/services/video-editing.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian film editor working at a colour-rich dual-monitor video editing station, cinematic timelines without legible text."
     },
     {
       "key": "reel-editing",
-      "path": "mobile/assets/services/reel-editing.png",
+      "path": "mobile/assets/services/reel-editing.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian social video editor creating a vertical fashion reel on a desktop monitor, vivid studio lighting and headphones, no text."
     },
     {
       "key": "wedding-film-editing",
-      "path": "mobile/assets/services/wedding-film-editing.png",
+      "path": "mobile/assets/services/wedding-film-editing.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian wedding film editor viewing wedding footage on a large studio monitor, romantic colourful wedding imagery, no readable text."
     },
     {
       "key": "bridal-hair",
-      "path": "mobile/assets/services/bridal-hair.png",
+      "path": "mobile/assets/services/bridal-hair.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: Close view of a professional stylist arranging an elegant bridal bun with fresh jasmine flowers in an adult Indian brideâ€™s dark hair."
     },
     {
       "key": "party-hair",
-      "path": "mobile/assets/services/party-hair.png",
+      "path": "mobile/assets/services/party-hair.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional hairstylist creating soft glamorous loose waves on an adult Indian woman for an evening party, tasteful blue outfit."
     },
     {
       "key": "haircut",
-      "path": "mobile/assets/services/haircut.png",
+      "path": "mobile/assets/services/haircut.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional hairstylist carefully giving a modern haircut to an adult Indian man, neat black cape, scissors and comb visible."
     },
     {
       "key": "general-hair",
-      "path": "mobile/assets/services/general-hair.png",
+      "path": "mobile/assets/services/general-hair.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional hair stylist blow-drying and styling an adult Indian womanâ€™s long dark hair, polished bright studio."
     },
     {
       "key": "groom-styling",
-      "path": "mobile/assets/services/groom-styling.png",
+      "path": "mobile/assets/services/groom-styling.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: A professional stylist arranging an adult Indian groomâ€™s hairstyle with a comb before a wedding, subtle festive gold background."
     },
     {
       "key": "event-reels",
-      "path": "mobile/assets/services/event-reels.png",
+      "path": "mobile/assets/services/event-reels.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian content creator shooting a vertical event reel on a smartphone gimbal at a colourful celebration."
     },
     {
       "key": "brand-content",
-      "path": "mobile/assets/services/brand-content.png",
+      "path": "mobile/assets/services/brand-content.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian content creator filming an elegant unbranded skincare product video in a modern home studio, ring light and smartphone."
     },
     {
       "key": "social-content",
-      "path": "mobile/assets/services/social-content.png",
+      "path": "mobile/assets/services/social-content.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: An adult Indian social content creator filming a lively lifestyle clip on a smartphone tripod in a colourful creative studio."
     },
     {
       "key": "product-reels",
-      "path": "mobile/assets/services/product-reels.png",
+      "path": "mobile/assets/services/product-reels.jpg",
       "prompt": "Generate one photorealistic editorial service photograph for a premium Indian services app. Square 1:1 composition, tasteful natural colours, flattering daylight, clean uncluttered setting, professional and welcoming. Keep the subject clear at small thumbnail size, medium-close framing. No lettering, logos, handles, watermarks, prices, badges, app UI or branded products. All people are adults. Scene: Close-up of a smartphone on a gimbal filming a beautiful unbranded cosmetic product on a pastel tabletop with studio lights."
     },
     {
       "key": "navratri",
-      "path": "mobile/assets/campaigns/navratri.png",
+      "path": "mobile/assets/campaigns/navratri.jpg",
       "prompt": "Generate one wide horizontal 16:9 editorial illustration asset for an Indian creative-services app, not a screenshot. Premium playful tactile paper sculpture and soft 3D objects, rich tasteful colours, refined studio lighting. Objects concentrated on the RIGHT half, quiet open space on LEFT for app text added later. No lettering, logos, text, price labels, watermark or frame. Scene: Festive Navratri dandiya sticks, marigold garlands, a colourful flowing lehenga fabric detail and small festive lamps, a warm coral, saffron and magenta palette with teal accents."
     },
     {
       "key": "diwali",
-      "path": "mobile/assets/campaigns/diwali.png",
+      "path": "mobile/assets/campaigns/diwali.jpg",
       "prompt": "Generate one wide horizontal 16:9 editorial illustration asset for an Indian creative-services app, not a screenshot. Premium playful tactile paper sculpture and soft 3D objects, rich tasteful colours, refined studio lighting. Objects concentrated on the RIGHT half, quiet open space on LEFT for app text added later. No lettering, logos, text, price labels, watermark or frame. Scene: A glowing diya lamp, marigold flowers, colourful rangoli petals and rich festive fabric, deep plum and warm gold palette with luminous orange accents."
     },
     {
       "key": "wedding",
-      "path": "mobile/assets/campaigns/wedding.png",
+      "path": "mobile/assets/campaigns/wedding.jpg",
       "prompt": "Generate one wide horizontal 16:9 editorial illustration asset for an Indian creative-services app, not a screenshot. Premium playful tactile paper sculpture and soft 3D objects, rich tasteful colours, refined studio lighting. Objects concentrated on the RIGHT half, quiet open space on LEFT for app text added later. No lettering, logos, text, price labels, watermark or frame. Scene: Elegant Indian wedding photography and beauty preparation still-life: a camera, makeup brush, bridal floral hair accessory and ivory flowers, warm blush, peach and champagne palette."
     }
   ],
   "results": [
     {
       "key": "bridal-makeup",
-      "path": "mobile/assets/services/bridal-makeup.png",
+      "path": "mobile/assets/services/bridal-makeup.jpg",
       "saved": true
     },
     {
       "key": "general-makeup",
-      "path": "mobile/assets/services/general-makeup.png",
+      "path": "mobile/assets/services/general-makeup.jpg",
       "saved": true
     },
     {
       "key": "wedding-makeup",
-      "path": "mobile/assets/services/wedding-makeup.png",
+      "path": "mobile/assets/services/wedding-makeup.jpg",
       "saved": true
     },
     {
       "key": "party-makeup",
-      "path": "mobile/assets/services/party-makeup.png",
+      "path": "mobile/assets/services/party-makeup.jpg",
       "saved": true
     },
     {
       "key": "festive-makeup",
-      "path": "mobile/assets/services/festive-makeup.png",
+      "path": "mobile/assets/services/festive-makeup.jpg",
       "saved": true
     },
     {
       "key": "wedding-photography",
-      "path": "mobile/assets/services/wedding-photography.png",
+      "path": "mobile/assets/services/wedding-photography.jpg",
       "saved": true
     },
     {
       "key": "prewedding-photography",
-      "path": "mobile/assets/services/prewedding-photography.png",
+      "path": "mobile/assets/services/prewedding-photography.jpg",
       "saved": true
     },
     {
       "key": "groom-makeup",
-      "path": "mobile/assets/services/groom-makeup.png",
+      "path": "mobile/assets/services/groom-makeup.jpg",
       "saved": true
     },
     {
       "key": "event-photography",
-      "path": "mobile/assets/services/event-photography.png",
+      "path": "mobile/assets/services/event-photography.jpg",
       "saved": true
     },
     {
       "key": "portrait-photography",
-      "path": "mobile/assets/services/portrait-photography.png",
+      "path": "mobile/assets/services/portrait-photography.jpg",
       "saved": true
     },
     {
       "key": "video-editing",
-      "path": "mobile/assets/services/video-editing.png",
+      "path": "mobile/assets/services/video-editing.jpg",
       "saved": true
     },
     {
       "key": "product-photography",
-      "path": "mobile/assets/services/product-photography.png",
+      "path": "mobile/assets/services/product-photography.jpg",
       "saved": true
     },
     {
       "key": "photo-editing",
-      "path": "mobile/assets/services/photo-editing.png",
+      "path": "mobile/assets/services/photo-editing.jpg",
       "saved": true
     },
     {
       "key": "reel-editing",
-      "path": "mobile/assets/services/reel-editing.png",
+      "path": "mobile/assets/services/reel-editing.jpg",
       "saved": true
     },
     {
       "key": "wedding-film-editing",
-      "path": "mobile/assets/services/wedding-film-editing.png",
+      "path": "mobile/assets/services/wedding-film-editing.jpg",
       "saved": true
     },
     {
       "key": "bridal-hair",
-      "path": "mobile/assets/services/bridal-hair.png",
+      "path": "mobile/assets/services/bridal-hair.jpg",
       "saved": true
     },
     {
       "key": "party-hair",
-      "path": "mobile/assets/services/party-hair.png",
+      "path": "mobile/assets/services/party-hair.jpg",
       "saved": true
     },
     {
       "key": "general-hair",
-      "path": "mobile/assets/services/general-hair.png",
+      "path": "mobile/assets/services/general-hair.jpg",
       "saved": true
     },
     {
       "key": "event-reels",
-      "path": "mobile/assets/services/event-reels.png",
+      "path": "mobile/assets/services/event-reels.jpg",
       "saved": true
     },
     {
       "key": "social-content",
-      "path": "mobile/assets/services/social-content.png",
+      "path": "mobile/assets/services/social-content.jpg",
       "saved": true
     },
     {
       "key": "groom-styling",
-      "path": "mobile/assets/services/groom-styling.png",
+      "path": "mobile/assets/services/groom-styling.jpg",
       "saved": true
     },
     {
       "key": "haircut",
-      "path": "mobile/assets/services/haircut.png",
+      "path": "mobile/assets/services/haircut.jpg",
       "saved": true
     },
     {
       "key": "brand-content",
-      "path": "mobile/assets/services/brand-content.png",
+      "path": "mobile/assets/services/brand-content.jpg",
       "saved": true
     },
     {
       "key": "navratri",
-      "path": "mobile/assets/campaigns/navratri.png",
+      "path": "mobile/assets/campaigns/navratri.jpg",
       "saved": true
     },
     {
       "key": "product-reels",
-      "path": "mobile/assets/services/product-reels.png",
+      "path": "mobile/assets/services/product-reels.jpg",
       "saved": true
     },
     {
       "key": "diwali",
-      "path": "mobile/assets/campaigns/diwali.png",
+      "path": "mobile/assets/campaigns/diwali.jpg",
       "saved": true
     },
     {
       "key": "wedding",
-      "path": "mobile/assets/campaigns/wedding.png",
+      "path": "mobile/assets/campaigns/wedding.jpg",
       "saved": true
     }
   ],

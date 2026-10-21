@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { FeePresets } from '../components/FeePresets';
 import { ProfessionalDetails } from '../components/ProfessionalDetails';
@@ -7,7 +8,7 @@ import { ProfessionalServices, ProfessionalServiceSummary, ServiceTypePicker } f
 import { services as loadServices } from '../lib/api';
 import { visibleCategories, servicesForCategory } from '../lib/serviceCatalog';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View } from 'react-native';
 import DateTimePicker from '../components/DateTimePicker';
 import { categories, categoryLabels, errorText, money, type Category, type Coordinate, type Professional } from '../domain';
 import { questionnaires } from '../questionnaires';
@@ -19,7 +20,7 @@ import { useAvailability, useResource } from '../hooks';
 import { isProfessionalApp } from '../appVariant';
 import { PhoneVerificationCard } from '../components/PhoneVerificationCard';
 import { supabase } from '../lib/supabase';
-import { TalentMap } from '../components/TalentMap';
+import { MapLocationField } from '../components/MapLocationField';
 import { myDisplayName, saveDisplayName } from '../lib/api';
 import { InstagramVerificationBadge } from '../components/InstagramVerificationBadge';
 import { PortfolioManager } from '../components/PortfolioManager';
@@ -133,7 +134,7 @@ export function Join({ userId, center, onDone }: { userId: string; center: Coord
     return { profile, privateData, service: packages?.[0], draft: draft?.draft, professionalName: registration.professional_name };
   }, userId);
   const [loaded, setLoaded] = useState(false);
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<import('react-native').ScrollView>(null);
   useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [section]);
   // Hydrate once; edits are never overwritten by later refreshes.
   useEffect(() => { if (existing.data && !loaded) {
@@ -238,7 +239,7 @@ export function Join({ userId, center, onDone }: { userId: string; center: Coord
     {section < 0 && <><View style={styles.row}>{visibleCategories.map(role => <Chip key={role} title={categoryLabels[role]} selected={category === role} onPress={() => { if (category !== role) { setCategory(role); setAnswers({}); } }} />)}</View>
       <View style={{ gap: 4 }}><Text style={styles.label}>Public username</Text><Text style={styles.text}>{name || 'Assigned when you publish'}</Text></View><Field label="Base city" value={city} onChange={setCity} />
       <Field label="Professional introduction" value={bio} onChange={setBio} multiline /><Field label="Specialties (comma separated)" value={specialties} onChange={setSpecialties} />
-      <TalentMap center={point} onChooseLocation={setPoint} /><Text style={styles.muted}>Your public location is rounded to an approximate service area.</Text>
+      <MapLocationField center={point} onChooseLocation={setPoint} label="Choose service area on map" /><Text style={styles.muted}>Your public location is rounded to an approximate service area.</Text>
       <Button title="Continue to professional details" icon="arrow" onPress={next} /></>}
     {section >= 0 && section < sections.length && <><Text style={styles.muted}>{sections[section]!.description}</Text>
       {sections[section]!.fields.map(field => <Card key={field.id}><Text style={styles.text}>{field.label}{field.required ? ' *' : ''}</Text>

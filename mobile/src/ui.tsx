@@ -88,15 +88,15 @@ export function BrandMark({ size = 32, color }: { size?: number; color?: string 
   const { colors } = useTheme();
   return <Image accessibilityLabel="Circle logo" source={require('../assets/brand/mark-black.png')} style={{ width: size, height: size, tintColor: color || colors.text }} resizeMode="contain" />;
 }
-export function Brand({ compact = false, stacked = false, onAccent = false }: { compact?: boolean; stacked?: boolean; onAccent?: boolean }) {
+export function Brand({ compact = false, stacked = false, onAccent = false, foregroundColor }: { compact?: boolean; stacked?: boolean; onAccent?: boolean; foregroundColor?: string }) {
   const { colors } = useTheme();
   if (stacked) return <View testID="brand-lockup" style={{ alignItems: 'flex-start', gap: 0 }}>
-    <View style={{ width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}><BrandMark size={62} color={onAccent ? '#ffffff' : undefined} /></View>
-    <Text style={{ fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -1.2, color: onAccent ? '#fff' : colors.text, marginTop: 16 }}>{brandCopy.name}</Text>
+    <View style={{ width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}><BrandMark size={62} color={foregroundColor || (onAccent ? '#ffffff' : undefined)} /></View>
+    <Text style={{ fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -1.2, color: foregroundColor || (onAccent ? '#fff' : colors.text), marginTop: 16 }}>{brandCopy.name}</Text>
     <Text style={{ fontSize: 10, lineHeight: 17, letterSpacing: 2, color: onAccent ? '#ffffffdd' : colors.muted, marginTop: 6 }}>{brandCopy.tagline}</Text>
     <Text style={{ fontSize: 9, lineHeight: 15, letterSpacing: 1.5, color: onAccent ? '#ffffffcc' : colors.muted, marginTop: 5 }}>{brandCopy.footer}</Text>
   </View>;
-  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><BrandMark size={36} color={onAccent ? '#ffffff' : undefined} />{!compact && <Text style={{ fontSize: 19, fontWeight: '700', letterSpacing: -.6, color: onAccent ? '#ffffff' : colors.text }}>{brandCopy.name}</Text>}</View>;
+  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><BrandMark size={36} color={foregroundColor || (onAccent ? '#ffffff' : undefined)} />{!compact && <Text style={{ fontSize: 19, fontWeight: '700', letterSpacing: -.6, color: foregroundColor || (onAccent ? '#ffffff' : colors.text) }}>{brandCopy.name}</Text>}</View>;
 }
 export function Button({ title, onPress, secondary = false, disabled = false, busy = false, icon }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean; busy?: boolean; icon?: IconName }) {
   const { styles, colors } = useTheme();
@@ -110,7 +110,7 @@ export function TextButton({ title, onPress, disabled = false }: { title: string
 }
 export function Field({ label, value, onChange, placeholder, numeric, multiline, secure, ...props }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; numeric?: boolean; multiline?: boolean; secure?: boolean } & Omit<TextInputProps, 'onChange' | 'value'>) {
   const { styles, colors } = useTheme(); const [focused, setFocused] = useState(false);
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} keyboardType={numeric ? 'decimal-pad' : 'default'} multiline={multiline} secureTextEntry={secure} {...props} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[styles.input, multiline && { minHeight: 100, textAlignVertical: 'top' }, focused && { borderColor: colors.accent }, props.style]} /></View>;
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} keyboardType={numeric ? 'decimal-pad' : 'default'} multiline={multiline} secureTextEntry={secure} {...props} onFocus={event => { setFocused(true); props.onFocus?.(event); }} onBlur={event => { setFocused(false); props.onBlur?.(event); }} style={[styles.input, multiline && { minHeight: 100, textAlignVertical: 'top' }, focused && { borderColor: colors.accent }, props.style]} /></View>;
 }
 export function Card({ children }: { children: ReactNode }) { const { styles } = useTheme(); return <View style={styles.card}>{children}</View>; }
 export function Notice({ message }: { message: string }) { const { styles } = useTheme(); return message ? <Text accessibilityRole="alert" style={styles.notice}>{message}</Text> : null; }
@@ -124,7 +124,7 @@ export function EmptyState({ title, message, action, onAction, icon = 'search' }
   const { styles, colors } = useTheme(); return <Card><View style={{ alignItems: 'center', paddingVertical: 20, gap: 14 }}><Icon name={icon} size={30} color={colors.accent} /><Text style={styles.heading}>{title}</Text><Text style={[styles.muted, { textAlign: 'center', maxWidth: 360 }]}>{message}</Text>{action && onAction && <TextButton title={action} onPress={onAction} />}</View></Card>;
 }
 export const craftImages: Record<string, ImageSourcePropType> = { Makeup: require('../assets/crafts/makeup-neutral.png'), Actor: require('../assets/crafts/actor-neutral.png'), Photographer: require('../assets/crafts/photographer-neutral.png'), Editor: require('../assets/crafts/editor-neutral.png'), Dancer: require('../assets/crafts/dancer-neutral.png'), HairStylist: require('../assets/crafts/hairstylist-neutral.png'), ContentCreator: require('../assets/crafts/contentcreator-neutral.png') };
-export const welcomeImages: Record<string, ImageSourcePropType> = { Makeup: require('../assets/welcome/makeup.png'), Actor: require('../assets/welcome/actor.png'), Photographer: require('../assets/welcome/photographer.png'), Editor: require('../assets/welcome/editor.png'), Dancer: require('../assets/welcome/dancer.png'), HairStylist: require('../assets/welcome/hairstylist.png'), ContentCreator: require('../assets/welcome/contentcreator.png') };
+export const welcomeImages: Record<string, ImageSourcePropType> = { Makeup: require('../assets/welcome/makeup.jpg'), Actor: require('../assets/welcome/actor.jpg'), Photographer: require('../assets/welcome/photographer.jpg'), Editor: require('../assets/welcome/editor.jpg'), Dancer: require('../assets/welcome/dancer.jpg'), HairStylist: require('../assets/welcome/hairstylist.jpg'), ContentCreator: require('../assets/welcome/contentcreator.jpg') };
 
 export function GalleryArtwork() {
   return <View pointerEvents="none" accessible={false} style={{ height: 130, width: '100%', overflow: 'hidden' }}>

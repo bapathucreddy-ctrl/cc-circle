@@ -1,0 +1,23 @@
+{
+  "readOnlyAudit": true,
+  "professional_photos": {
+    "rows": 1,
+    "withStoragePath": 1,
+    "legacyOrImported": 0,
+    "storageProbeStatuses": [
+      200
+    ]
+  },
+  "portfolio_media": {
+    "rows": 5,
+    "withStoragePath": 5,
+    "legacyOrImported": 0,
+    "storageProbeStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200
+    ]
+  }
+}

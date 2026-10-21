@@ -1,6 +1,7 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { AppState, RefreshControl, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { categoryLabels, errorText, money, type Booking, type Coordinate, type TrackingLocation } from '../domain';
 import { Button, Card, Field, Icon, Notice, Segmented, useTheme } from '../ui';
@@ -9,7 +10,7 @@ import * as api from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { drivingRoute } from '../lib/routes';
 import { openPayment } from '../lib/payments';
-import { TalentMap } from '../components/TalentMap';
+import { MapExperience } from '../components/MapExperience';
 import { statusLabels } from './Marketplace';
 import { currentLocation } from '../lib/currentLocation';
 import { isProfessionalApp } from '../appVariant';
@@ -198,19 +199,14 @@ export function BookingDetail({ initial, userId, onReviewSubmitted }: { initial:
   const stage = ['requested', 'accepted', 'en_route', 'arrived', 'completed'].indexOf(booking.status);
   const journeyTitle = booking.status === 'arrived' && booking.service_started_at ? booking.completion_requested_at ? 'Confirm your completed service.' : 'Your service is in progress.' : booking.status === 'requested' ? 'Waiting for acceptance.' : booking.status === 'accepted' ? isProfessional ? (booking.paid_at||hourly) ? 'Ready to start your journey.' : 'Waiting for booking confirmation.' : (booking.paid_at||hourly) ? 'Your professional accepted.' : 'Accepted. Pay before your service.' : booking.status === 'en_route' ? isProfessional ? 'Navigate to your client.' : 'Your professional is on the way.' : booking.status === 'arrived' ? isProfessional ? 'You have arrived.' : 'Your professional has arrived.' : booking.status === 'completed' ? 'A collaboration, complete.' : `Booking ${statusLabels[booking.status].toLowerCase()}.`;
   const mapStatus = !trackingActive ? 'Service location' : point ? fresh ? 'Location recently updated' : 'Last known location · update delayed' : 'Awaiting shared location';
-  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}
-    refreshControl={<RefreshControl refreshing={result.loading} onRefresh={() => { void result.refresh(); void conversation.refresh(); void location.refresh(); void participants.refresh(); }} />}>
+  const details = <>
     <Text style={styles.eyebrow}>BOOKING #{booking.id.slice(0, 8)}</Text><Text style={styles.title}>{journeyTitle}</Text>
     <Card><Text style={styles.eyebrow}>{otherRole}</Text><Text style={styles.heading}>{otherName}</Text>{Boolean(participants.error) && <Text style={styles.muted}>Name unavailable. Pull to refresh.</Text>}</Card>
     {messagingEnabled && <Segmented options={[{ id: 'details', label: 'Booking & tracking' }, { id: 'messages', label: `Messages${conversation.data?.length ? ` (${conversation.data.length})` : ''}` }]} value={tab} onChange={setTab} />}
     <Notice message={error || result.error || location.error} />
     {(tab === 'details' || !messagingEnabled) && <>
-    {!isProfessional && booking.status === 'completed' && (!hourly||Boolean(booking.paid_at)) && <BookingReviewCard bookingId={booking.id} onSubmitted={onReviewSubmitted} />}
-    {isProfessional && booking.status === 'en_route' && fresh && guidance?.instruction && <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center', backgroundColor: colors.action, padding: 22, borderRadius: 20 }}>
-      <Text accessibilityElementsHidden style={{ color: '#fff', fontSize: 36 }}>{guidance.modifier?.includes('left') ? '↰' : guidance.modifier?.includes('right') ? '↱' : guidance.modifier?.includes('uturn') ? '↶' : '↑'}</Text>
-      <View style={{ flex: 1, gap: 5 }}><Text style={{ color: '#fff', fontWeight: '600', fontSize: 19 }}>{guidance.instruction}</Text><Text style={{ color: '#fff', fontSize: 12 }}>{guidance.stepDistanceMeters != null ? guidance.stepDistanceMeters >= 1000 ? `${(guidance.stepDistanceMeters / 1000).toFixed(1)} km on this road` : `${Math.round(guidance.stepDistanceMeters)} m on this road` : 'Follow the highlighted route'}</Text><Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{eta} min · {distance !== null ? `${(distance / 1000).toFixed(1)} km remaining` : ''}</Text></View>
-    </View>}
-    {active && <TalentMap trackingCategory={participants.data?.category} centerIsLocation={!trackingActive || !point} center={trackingActive && point ? point : destination} destination={trackingActive && point ? destination : undefined} tracking={trackingActive && Boolean(point)} heading={latestLocation?.heading} route={route} height={trackingActive ? 560 : 400} label={trackingActive ? 'Your journey · 3D navigation' : 'Your service location'} status={mapStatus} distanceLabel={distance !== null && fresh ? distance >= 1000 ? `${(distance / 1000).toFixed(1)} km remaining` : `${Math.round(distance)} m remaining` : undefined} />}
+    {!isProfessional && booking.status === 'completed' && (!hourly||Boolean(booking.paid_at)) && <BookingReviewCard userId={userId} professionalId={booking.professional_id} bookingId={booking.id} onSubmitted={onReviewSubmitted} />}
+
     {isProfessional && trackingActive && <Button title="Open in Google Maps" icon="pin" secondary onPress={() => { void openGoogleMaps(destination).catch(e => setError(errorText(e))); }} />}
     {trackingActive && <Card><View style={styles.between}><View style={{ flex: 1 }}><Text style={styles.heading}>{booking.status === 'arrived' ? 'Arrived at your venue' : eta !== null && fresh ? `${eta} min estimated drive` : point ? fresh ? routeError ? 'Route unavailable' : 'Finding your route…' : 'Waiting for a fresh update' : 'Location not shared yet'}</Text><Text style={styles.muted}>{distance !== null && fresh ? `${(distance / 1000).toFixed(1)} km remaining · ` : ''}{point ? `Last update ${new Date(latestLocation!.updated_at).toLocaleTimeString()}` : 'Location appears when the professional starts their journey.'}</Text></View><Icon name="pin" color={colors.accent} /></View><Text style={styles.text}>{booking.venue}</Text>{Boolean(routeError) && <Text style={styles.muted}>{routeError}</Text>}</Card>}
     {stage >= 0 && <View style={{ flexDirection: 'row', gap: 5 }}>{['Request', 'Accepted', 'Journey', 'Arrived', 'Done'].map((label, index) => <View key={label} style={{ flex: 1, gap: 7 }}><View style={{ height: 3, borderRadius: 2, backgroundColor: index <= stage ? colors.accent : colors.line }} /><Text style={{ fontSize: 10, color: index <= stage ? colors.accent : colors.muted }}>{label}</Text></View>)}</View>}
@@ -219,12 +215,11 @@ export function BookingDetail({ initial, userId, onReviewSubmitted }: { initial:
       {!isProfessional && refund.data && <Text style={styles.muted}>Refund: {refund.data.status}</Text>}
 
       <Text style={styles.muted}>{new Date(booking.starts_at).toLocaleString()} · {booking.venue}</Text><Text style={styles.text}>{booking.notes}</Text></Card>
-    {isProfessional && booking.status === 'requested' && <><Button title="Accept request" onPress={() => change('accepted')} busy={busy} /><Button title="Decline request" secondary onPress={() => change('declined')} busy={busy} /></>}
+
     {!isProfessional && canPayBooking(booking) && <><PhoneVerificationCard onVerified={setPaymentPhoneReady} /><Button title="Pay with Cashfree" onPress={pay} busy={busy} disabled={!paymentPhoneReady} /></>}
-    {isProfessional && booking.status === 'accepted' && (Boolean(booking.paid_at)||hourly) && <Button title="Start journey" icon="arrow" onPress={startJourney} busy={busy} />}
 
     {sharing && <Text style={styles.muted}>Sharing your journey location. With background sharing enabled and availability on, updates continue when you leave this screen or lock your phone.</Text>}
-    {isProfessional && booking.status === 'en_route' && <Button title="I have arrived" onPress={() => change('arrived')} busy={busy} />}
+
     {booking.status === 'arrived' && (Boolean(booking.paid_at)||hourly) && <ServiceVerification booking={booking} professional={isProfessional} onChange={result.refresh} />}
     {['requested', 'accepted'].includes(booking.status) && <Button title="Cancel booking" secondary onPress={() => change('cancelled')} busy={busy} />}
     {messagingEnabled && <Button title={`Message ${otherName}`} icon="chat" secondary onPress={() => setTab('messages')} />}
@@ -235,5 +230,13 @@ export function BookingDetail({ initial, userId, onReviewSubmitted }: { initial:
     {conversation.data?.map(item => <View key={item.id} style={[styles.card, { maxWidth: '86%', alignSelf: item.sender_id === userId ? 'flex-end' : 'flex-start', backgroundColor: item.sender_id === userId ? colors.selected : colors.panel }]}><Text style={[styles.muted, { fontSize: 10 }]}>{item.sender_id === userId ? 'You' : otherName} · {new Date(item.created_at).toLocaleTimeString()}</Text><Text style={styles.text}>{item.body}</Text></View>)}
     <Field label="Message" value={message} onChange={setMessage} multiline placeholder="Type your message…" maxLength={1000} /><Button title="Send message" icon="arrow" onPress={send} busy={busy} disabled={!message.trim()} />
     </>}
-  </ScrollView>;
+  </>;
+  const refresh = <RefreshControl refreshing={result.loading} onRefresh={() => { void result.refresh(); void conversation.refresh(); void location.refresh(); void participants.refresh(); }} />;
+  if (active && (tab === 'details' || !messagingEnabled)) return <MapExperience chromeInset={68} title={trackingActive ? 'Your journey' : 'Booking details'} subtitle={statusLabels[booking.status]}
+    map={{ trackingCategory: participants.data?.category, centerIsLocation: !trackingActive || !point, center: trackingActive && point ? point : destination, destination: trackingActive && point ? destination : undefined, tracking: trackingActive && Boolean(point), heading: latestLocation?.heading, route, status: mapStatus, distanceLabel: distance !== null && fresh ? distance >= 1000 ? (distance / 1000).toFixed(1)+' km remaining' : Math.round(distance)+' m remaining' : undefined }}
+    top={isProfessional && trackingActive && guidance?.instruction ? <View style={{backgroundColor:colors.action,borderRadius:16,padding:14,gap:5}}><Text style={{color:'#fff',fontSize:15,fontWeight:'600'}}>{guidance.instruction}</Text><Text style={{color:'#fff',fontSize:12}}>{eta != null ? eta+' min / ' : ''}{distance!==null ? (distance/1000).toFixed(1)+' km remaining' : 'Follow the highlighted route'}</Text></View> : undefined}
+    footer={isProfessional && booking.status==='requested' ? <View style={{flexDirection:'row',gap:8}}><View style={{flex:1}}><Button title="Decline" secondary onPress={()=>change('declined')} busy={busy}/></View><View style={{flex:1}}><Button title="Accept request" onPress={()=>change('accepted')} busy={busy}/></View></View> : isProfessional && booking.status==='accepted' && (Boolean(booking.paid_at)||hourly) ? <Button title="Start journey" icon="arrow" onPress={startJourney} busy={busy}/> : isProfessional && booking.status==='en_route' ? <Button title="I have arrived" onPress={()=>change('arrived')} busy={busy}/> : undefined}
+    refreshControl={refresh}>{details}</MapExperience>;
+  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingTop: 80 }]} refreshControl={refresh}>{details}</ScrollView>;
+
 }

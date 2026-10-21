@@ -1,7 +1,8 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { EarningsDashboard } from '../components/ProfessionalAnalytics';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, Text, View } from 'react-native';
 import { errorText, money } from '../domain';
 import { useForegroundRefresh, useResource } from '../hooks';
 import { professionalPayouts } from '../lib/professionalPayouts';

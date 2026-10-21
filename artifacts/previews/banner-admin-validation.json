@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-21T11:13:13.036Z",
+  "adminUrl": "http://localhost:8090",
+  "schemaDeployed": true,
+  "approvedEmail": "chetan.reddy@cclabs.space",
+  "accountRegistration": "User verifies ownership at first sign-in",
+  "authCallbackVerified": true,
+  "privateConfigurationChecks": 7,
+  "privateCredentialsFound": false,
+  "mobileTests": 157,
+  "additionalUploadedBannerTest": true,
+  "backendTests": 27,
+  "deploymentTests": 8,
+  "typeScriptPassed": true,
+  "apkRebuilt": true,
+  "customerApk": "Circle-Customer-0.1.14.apk",
+  "professionalApk": "Circle-Professional-0.1.19.apk",
+  "adminTests": 2,
+  "adminApk": "Circle-Admin-0.1.0.apk",
+  "multiProfessionFestivePicks": true
+}

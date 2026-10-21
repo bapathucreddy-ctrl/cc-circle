@@ -1,0 +1,71 @@
+{
+  "auditedOn": "2026-10-19",
+  "artifact": "Circle-Customer-0.1.9.apk",
+  "currentBytes": 169263795,
+  "measurement": "APK file bytes, not installed storage or Play download size",
+  "breakdownBytes": {
+    "pngResources": 84779364,
+    "arm64NativeLibraries": 37116208,
+    "arm32NativeLibraries": 25410732,
+    "dex": 15198527,
+    "assets": 3372778
+  },
+  "targetBytes": 90000000,
+  "preferredBytes": 70000000,
+  "implementedSizeOptimizations": true,
+  "plan": [
+    {
+      "step": 1,
+      "action": "Resize oversized photo assets to their display requirements and encode efficient WebP variants; preserve original source artwork outside the app bundle",
+      "estimatedSavingsMB": "50-70",
+      "requires": "Visual comparison at target display sizes; retain transparency and readable banner text"
+    },
+    {
+      "step": 2,
+      "action": "Provide an ARM64-specific sideload APK and retain a separate 32-bit build if required; use an Android App Bundle for Play device-specific delivery",
+      "knownArm32PayloadBytes": 25410732,
+      "requires": "Device compatibility checks; an ARM64-only APK cannot install on 32-bit Android"
+    },
+    {
+      "step": 3,
+      "action": "Enable release code and resource shrinking with correct native SDK keep rules",
+      "estimatedSavingsMB": "Measure after rebuild; not yet established",
+      "requires": "Regression checks for checkout, maps, sign-in, notifications, video and background location"
+    },
+    {
+      "step": 4,
+      "action": "Rebuild each role sequentially, measure signed binaries, verify embedded app roles and signatures, and test core flows on devices",
+      "requires": "Compare raw APK size separately from Play download and installed storage"
+    }
+  ],
+  "projection": "Measured replacement APKs are below 90 MB; code/resource shrinking remains disabled pending crash diagnosis.",
+  "completedOn": "2026-10-21",
+  "result": {
+    "nativeLibrariesCompressed": true,
+    "codeShrinking": false,
+    "resourceShrinking": false,
+    "bothPhoneArchitecturesRetained": true,
+    "apks": [
+      {
+        "variant": "customer",
+        "version": "0.1.14",
+        "versionCode": 15,
+        "bytes": 56235573,
+        "sizeMB": 56.24,
+        "file": "Circle-Customer-0.1.14.apk",
+        "sha256": "ce26394d5559d7ba6028bd9a2e8e94f7d5c4d318c3c4539c3866362bd1c6c595"
+      },
+      {
+        "variant": "professional",
+        "version": "0.1.19",
+        "versionCode": 20,
+        "bytes": 56067374,
+        "sizeMB": 56.07,
+        "file": "Circle-Professional-0.1.19.apk",
+        "sha256": "c3b58b72f3d14cc25df7b9b6521249e160af14e575e8e073de5e8de0d8c8cda2"
+      }
+    ],
+    "physicalDeviceTested": false,
+    "crashResolutionConfirmed": false
+  }
+}

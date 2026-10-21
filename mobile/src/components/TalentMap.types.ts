@@ -5,4 +5,7 @@ export type TalentMapProps = {
   trackingCategory?: Category; centerIsLocation?: boolean;
   onChooseLocation?: (point: Coordinate) => void;
   height?: number; label?: string; status?: string; distanceLabel?: string;
+  immersive?: boolean; overlayBottom?: number; overlayTop?: number;
+  cameraOverlayBottom?: number;
+  selectedProfessionalId?: string;
 };

@@ -1,15 +1,16 @@
+import { KeyboardAwareScrollView as ScrollView } from '../components/KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from '../components/ServiceLoader';
 import { ServiceCraftIcon } from '../components/ServiceCraftIcon';
 import { visibleCategories } from '../lib/serviceCatalog';
 import { useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { bengaluru, categories, categoryLabels, errorText, money, type Booking, type Category, type Coordinate, type Professional } from '../domain';
 import { useForegroundRefresh, useResource } from '../hooks';
 import { Button, Card, Field, Icon, IconButton, Notice, Segmented, TextButton, useTheme } from '../ui';
 import { AppearanceSelect } from '../components/AppearanceSelect';
 import DateTimePicker from '../components/DateTimePicker';
 import { LocationPicker } from '../components/LocationPicker';
-import { TalentMap } from '../components/TalentMap';
+import { MapLocationField } from '../components/MapLocationField';
 import { createRequestId } from '../lib/requestId';
 import { supabase } from '../lib/supabase';
 import { services } from '../lib/api';
@@ -111,7 +112,7 @@ export function TeamRequestForm({ center, onPosted }: { center: Coordinate; onPo
     </Card>
     <Card><Text style={styles.heading}>Event location</Text>
       <LocationPicker center={point} label={venue || 'Choose an event venue'} onSelect={(value, label) => { setPoint(value); setVenue(label); setConfirmed(false); }} />
-      <TalentMap center={point} height={260} centerIsLocation label="Confirm the event venue pin" onChooseLocation={value => { setPoint(value); setVenue(previous => previous || `Event pin (${value[1].toFixed(5)}, ${value[0].toFixed(5)})`); setConfirmed(true); }} />
+      <MapLocationField center={point} label="Confirm the event venue pin" onChooseLocation={value => { setPoint(value); setVenue(previous => previous || `Event pin (${value[1].toFixed(5)}, ${value[0].toFixed(5)})`); setConfirmed(true); }} />
       {Boolean(venue) && <Button title={confirmed ? 'Venue pin confirmed' : 'Confirm this venue pin'} secondary icon="pin" onPress={() => setConfirmed(true)} />}
       <Text style={styles.muted}>Search an address, use GPS or tap the map for the exact venue. The venue is visible to matching professionals.</Text>
     </Card>

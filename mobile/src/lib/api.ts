@@ -125,13 +125,29 @@ export async function tracking(bookingId: string) {
   return data as TrackingLocation | null;
 }
 export async function savedIds(userId: string) {
-  const { data, error } = await supabase.from('saved_professionals').select('professional_id').eq('user_id', userId);
-  if (error) throw new Error(error.message);
-  return data.map(row => row.professional_id as string);
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from('saved_professionals').select('professional_id').eq('user_id', userId).order('professional_id').range(offset, offset + 499);
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Unable to load saved professionals.');
+    ids.push(...data.map(row => row.professional_id as string));
+    if (data.length < 500) return ids;
+  }
+}
+/** Saves are an account collection, independent of GPS, radius or online state. */
+export async function savedProfessionals(userId: string) {
+  const people: Professional[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from('saved_professionals').select('professional:professionals(*)').eq('user_id', userId).order('professional_id').range(offset, offset + 499);
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Unable to load saved professionals.');
+    for (const row of data as unknown as { professional: Professional | null }[]) if (row.professional) people.push(row.professional);
+    if (data.length < 500) return people;
+  }
 }
 export async function toggleSaved(userId: string, professionalId: string, saved: boolean) {
   const result = saved
     ? await supabase.from('saved_professionals').delete().eq('user_id', userId).eq('professional_id', professionalId)
-    : await supabase.from('saved_professionals').insert({ user_id: userId, professional_id: professionalId });
+    : await supabase.from('saved_professionals').upsert({ user_id: userId, professional_id: professionalId }, { onConflict: 'user_id,professional_id', ignoreDuplicates: true });
   if (result.error) throw new Error(result.error.message);
 }

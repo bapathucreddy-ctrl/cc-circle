@@ -1,19 +1,17 @@
-# Circle standalone Android apps
+# Circle Android updates
 
-Built 17 October 2026. Install over the matching existing app without uninstalling; package IDs and original signing keys are retained. Both launcher names are **Circle**, with the original logo. Expo Go, Metro and a computer connection are not required.
+Latest builds: 21 October 2026.
 
-| App | Version / Android code | APK |
-| --- | --- | --- |
-| Customer | 0.1.5 / 6 | [Circle-Customer.apk](Circle-Customer.apk) |
-| Professional | 0.1.10 / 11 | [Circle-Professional.apk](Circle-Professional.apk) |
+| App | Version | Size | Download |
+| --- | --- | --- | --- |
+| Customer | 0.1.14 / code 15 | 56.24 MB | [APK](Circle-Customer-0.1.14.apk) |
+| Professional | 0.1.19 / code 20 | 56.07 MB | [APK](Circle-Professional-0.1.19.apk) |
+| Admin | 0.1.0 / code 1 | 0.09 MB | [APK](Circle-Admin-0.1.0.apk) |
 
-The original animated splash is restored; the extra native static logo is removed. Both apps include a private notification inbox, unread count and preferences. Booking, journey, service, payment/refund/payout, paid-active chat, event, review and portfolio updates are generated on the server. **Closed-app push still needs Firebase configuration and a rebuild.** [Setup and coverage](../../docs/notifications-and-circle.md). Instagram client credentials are configured in Supabase; the professional still needs to authorize their tester account.
+These builds retain the existing package IDs and signing keys and update the previous releases. The customer app includes compact map controls, a collapsed nearby list, admin-uploaded banners and configurable multi-profession Festive picks.
 
-Approved all-craft close-up navigation, background GPS and optional Google Maps handoff are retained. Professional-only background location permission remains; both apps now have notification/boot permissions from the notification SDK. Sharing still requires consent/online status and OS access. A powered-off phone cannot send GPS. Payments remain Cashfree sandbox.
+TypeScript and 157 mobile tests passed. Signatures, native modules, original logo, 32-bit and 64-bit ARM support, production bundles and 16 KB alignment were checked. Physical-device installation and runtime testing remain unverified.
 
-87 mobile tests, TypeScript and 21 database tests pass. Both web exports and isolated browser inbox/splash checks pass with mocked accounts. Both APKs have verified final Hermes bytecode, native/embedded identity, Circle label, ten transparent native launch images, notification module, Mapbox/Cashfree/TaskManager, all 8craft rider PNGs, original certificates and ZIP / 18 ARM64 ELF16KB compatibility. **Physical-device testing of these builds, closed-app push and Meta interactive authorization remain pending.** No real booking/payment/OTP action was automated.
+[Release validation](../previews/mobile-admin-release-validation.json)
 
-| APK | Bytes | SHA-256 |
-| --- | ---: | --- |
-| Customer | 105785829 | 30ad173122bff34581413a5110c98ffca29c588579410eead9e552330fbbf7f2 |
-| Professional | 105785221 | c3ef4924a06dee1a34a88a0a1392dcbedd6eb1929aab026895fe16f83b8784dd |
+Circle Admin installs separately. Sign in with the approved email `chetan.reddy@cclabs.space`, verify ownership, then upload a banner and select professions/services under **Festive picks**. The selected cards appear in the customer app within 30 seconds while open. It packages the panel and requires no localhost server. Native OAuth and file-picker behavior have not yet been checked on a physical phone.

@@ -1,6 +1,7 @@
+import { KeyboardAwareScrollView as ScrollView } from './KeyboardAwareScrollView';
 import { ServiceLoader as ActivityIndicator } from './ServiceLoader';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { isProfessionalApp } from '../appVariant';
 import { errorText } from '../domain';
 import { useResource } from '../hooks';

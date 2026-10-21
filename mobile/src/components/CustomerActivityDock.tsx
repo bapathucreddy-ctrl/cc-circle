@@ -9,7 +9,7 @@ import { Icon, useTheme } from '../ui';
 import { genericRiderImage, riderImages } from './mapArtwork';
 import { customerActivity } from '../lib/customerActivity';
 
-export function CustomerActivityDock({ userId, currentBookingId, refreshVersion, reviewedBookingIds, onOpen }: { userId: string; currentBookingId?: string; refreshVersion: number; reviewedBookingIds: string[]; onOpen: (booking: Booking) => void }) {
+export function CustomerActivityDock({ userId, currentBookingId, refreshVersion, reviewedBookingIds, onOpen, hideReviewReminder = false }: { userId: string; currentBookingId?: string; refreshVersion: number; reviewedBookingIds: string[]; onOpen: (booking: Booking) => void; hideReviewReminder?: boolean }) {
   const activity = useResource(async () => {
     return customerActivity(await bookingActivity(), new Set(reviewedBookingIds));
   }, `${userId}-${refreshVersion}`);
@@ -19,6 +19,7 @@ export function CustomerActivityDock({ userId, currentBookingId, refreshVersion,
     return () => { void supabase.removeChannel(channel); };
   }, [userId, activity.refresh]);
   if (!activity.data || activity.data.id === currentBookingId || (activity.data.status === 'completed' && !(activity.data.billing_mode==='hourly'&&!activity.data.paid_at) && (Boolean(activity.error) || reviewedBookingIds.includes(activity.data.id)))) return null;
+  if (hideReviewReminder && activity.data.status === 'completed' && !(activity.data.billing_mode === 'hourly' && !activity.data.paid_at)) return null;
   return <ActivityCard key={activity.data.id} booking={activity.data} onOpen={onOpen} />;
 }
 function ActivityCard({ booking, onOpen }: { booking: Booking; onOpen: (booking: Booking) => void }) {
