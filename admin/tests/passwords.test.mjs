@@ -1,0 +1,11 @@
+import {test}from'node:test';import assert from'node:assert/strict';import{passwordControls}from'../src/passwords.js';
+test('password login sends no email, setup validates confirmation and clears password fields after save',async()=>{
+ const ids=['password-login-form','login-form','code-form','login-password-tab','login-email-tab','auth-notice','password-sign-in','password-email','login-password','show-login-password','show-new-password','new-password','confirm-password','auth','denied','workspace','password-setup','setup-cancel','password-account','password-setup-notice','password-setup-form','save-password','setup-sign-out','sign-out'];
+ const nodes=new Map(ids.map(id=>[id,{value:'',hidden:false,textContent:'',setAttribute(){},click(){this.onclick?.();}}]));globalThis.document={getElementById:id=>{assert.ok(nodes.has(id));return nodes.get(id);}};
+ let signIn,updated,saved=0;const controls=passwordControls({auth:{async signInWithPassword(value){signIn=value;return{data:{},error:null};},async updateUser(value){updated=value;return{data:{},error:null};}}},async()=>{saved++;});
+ nodes.get('password-email').value='admin@example.test';nodes.get('login-password').value='example-secret';await nodes.get('password-login-form').onsubmit({preventDefault(){}});assert.deepEqual(signIn,{email:'admin@example.test',password:'example-secret'});assert.equal(nodes.get('login-password').value,'');
+ controls.show('admin@example.test');assert.equal(nodes.get('password-account').textContent,'admin@example.test');assert.equal(nodes.get('setup-cancel').hidden,true);
+ nodes.get('new-password').value='long-secret';nodes.get('confirm-password').value='different';await nodes.get('password-setup-form').onsubmit({preventDefault(){}});assert.equal(updated,undefined);assert.match(nodes.get('password-setup-notice').textContent,/do not match/);
+ nodes.get('confirm-password').value='long-secret';await nodes.get('password-setup-form').onsubmit({preventDefault(){}});assert.deepEqual(updated,{password:'long-secret'});assert.equal(saved,1);assert.equal(nodes.get('new-password').value,'');assert.equal(nodes.get('confirm-password').value,'');
+ controls.show('admin@example.test',false);assert.equal(nodes.get('setup-cancel').hidden,false);nodes.get('setup-cancel').click();assert.equal(nodes.get('workspace').hidden,false);delete globalThis.document;
+});

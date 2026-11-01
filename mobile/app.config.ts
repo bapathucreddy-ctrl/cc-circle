@@ -7,12 +7,12 @@ const professional = variant === 'professional';
 const easProjectId = (professional ? process.env.EAS_PROFESSIONAL_PROJECT_ID : process.env.EAS_CUSTOMER_PROJECT_ID) || process.env.EAS_BUILD_PROJECT_ID;
 const googleServicesFile = (professional ? process.env.GOOGLE_SERVICES_PROFESSIONAL_JSON : process.env.GOOGLE_SERVICES_CUSTOMER_JSON) || process.env.GOOGLE_SERVICES_JSON;
 const iosPushConfigured = process.env.IOS_PUSH_ENABLED === 'true';
-const name = 'Circle';
+const name = 'Artist House';
 const config: ExpoConfig = {
   name,
   icon: professional ? './assets/brand/app-icon-professional.png' : './assets/brand/app-icon-customer.png',
   slug: professional ? 'circle-profession' : 'circle',
-  version: professional ? '0.1.19' : '0.1.14',
+  version: professional ? '0.2.3' : '0.2.2',
   orientation: 'portrait',
   scheme: professional ? 'cccircle-pro' : 'cccircle',
   extra: { appVariant: variant, androidPushConfigured: Boolean(googleServicesFile), iosPushConfigured, ...(easProjectId ? { eas: { projectId: easProjectId } } : {}) },
@@ -25,7 +25,7 @@ const config: ExpoConfig = {
       LSApplicationQueriesSchemes: ['phonepe', 'tez', 'paytm', 'paytmmp', 'bhim', 'upi', 'comgooglemaps'],
     },
   },
-  android: { softwareKeyboardLayoutMode: 'resize', package: professional ? 'com.cccircle.professional' : 'com.cccircle.customer', versionCode: professional ? 20 : 15,
+  android: { softwareKeyboardLayoutMode: 'resize', package: professional ? 'com.cccircle.professional' : 'com.cccircle.customer', versionCode: professional ? 25 : 21,
     ...(googleServicesFile ? { googleServicesFile } : {}),
     permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', ...(professional ? ['RECEIVE_BOOT_COMPLETED'] : [])] },
   plugins: [
@@ -40,8 +40,8 @@ const config: ExpoConfig = {
     '@react-native-community/datetimepicker',
     ['expo-location', {
       isIosBackgroundLocationEnabled: professional,
-      locationAlwaysAndWhenInUsePermission: 'While you are online, Circle shares your location with nearby customers even when the professional app is in the background. Going offline stops sharing.',
-      locationWhenInUsePermission: 'Circle uses your location to find creative talent and share your journey during a confirmed booking.',
+      locationAlwaysAndWhenInUsePermission: 'While you are online, Artist House shares your location with nearby customers even when the professional app is in the background. Going offline stops sharing.',
+      locationWhenInUsePermission: 'Artist House uses your location to find creative talent and share your journey during a confirmed booking.',
       isAndroidBackgroundLocationEnabled: professional,
       isAndroidForegroundServiceEnabled: professional,
     }],

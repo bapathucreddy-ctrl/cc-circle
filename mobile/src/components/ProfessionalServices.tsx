@@ -5,6 +5,7 @@ import { type Category, type Service, errorText, money } from '../domain';
 import { useResource } from '../hooks';
 import { services } from '../lib/api';
 import { servicesForCategory } from '../lib/serviceCatalog';
+import { useServiceNames } from '../lib/useServiceImages';
 import { supabase } from '../lib/supabase';
 import { Button, Card, Field, Notice, TextButton, useTheme } from '../ui';
 
@@ -21,9 +22,10 @@ export function ProfessionalServiceSummary({ items, onManage }: { items: Service
 }
 
 export function ServiceTypePicker({ category, value, onChoose }: { category: Category; value: string; onChoose: (key: string, label: string) => void }) {
+  const names = useServiceNames();
   const { styles, colors } = useTheme(); const [open, setOpen] = useState(false);
   return <><Button title={value || 'Choose a service'} secondary icon="chevron" onPress={() => setOpen(true)} />
-    <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}><View style={{ flex: 1, backgroundColor: '#0009', justifyContent: 'flex-end' }}><View style={{ backgroundColor: colors.panel, padding: 24, gap: 16, maxHeight: '80%', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}><Text style={styles.heading}>Choose a service</Text><ScrollView contentContainerStyle={{ gap: 10 }}>{servicesForCategory(category).map(item => <Button key={item.key} title={item.label} secondary onPress={() => { onChoose(item.key, item.label); setOpen(false); }} />)}</ScrollView><Button title="Close" secondary onPress={() => setOpen(false)} /></View></View></Modal>
+    <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}><View style={{ flex: 1, backgroundColor: '#0009', justifyContent: 'flex-end' }}><View style={{ backgroundColor: colors.panel, padding: 24, gap: 16, maxHeight: '80%', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}><Text style={styles.heading}>Choose a service</Text><ScrollView contentContainerStyle={{ gap: 10 }}>{servicesForCategory(category).map(item => <Button key={item.key} title={names[item.key] || item.label} secondary onPress={() => { onChoose(item.key, names[item.key] || item.label); setOpen(false); }} />)}</ScrollView><Button title="Close" secondary onPress={() => setOpen(false)} /></View></View></Modal>
   </>;
 }
 

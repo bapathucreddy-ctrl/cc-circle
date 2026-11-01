@@ -10,7 +10,7 @@ export type CircleNotification = {
   booking_id: string | null; event_id: string | null;
 };
 export type NotificationTarget = Pick<CircleNotification, 'id' | 'booking_id' | 'event_id' | 'kind'>;
-export type NotificationSettings = { push_enabled: boolean; messages_enabled: boolean; events_enabled: boolean };
+export type NotificationSettings = { push_enabled: boolean; messages_enabled: boolean; events_enabled: boolean; promotions_enabled: boolean };
 export const pushConfigured = Platform.OS === 'android' ? Constants.expoConfig?.extra?.androidPushConfigured === true
   : Platform.OS === 'ios' && Constants.expoConfig?.extra?.iosPushConfigured === true;
 const storageKey = `circle-notification-installation-${appVariant}`;

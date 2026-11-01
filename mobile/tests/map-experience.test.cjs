@@ -10,7 +10,7 @@ function load(file, requires = {}) {
   }).outputText, { exports, require: name => { if (name in requires) return requires[name]; throw Error(name); } });
   return exports;
 }
-function fixture(startCollapsed = false) {
+function fixture(startCollapsed = false, carousel = false) {
   const states = [], refs = []; let state = 0, ref = 0;
   const react = {
     useState: initial => { const i = state++; if (!(i in states)) states[i] = initial; return [states[i], value => { states[i] = typeof value === 'function' ? value(states[i]) : value; }]; },
@@ -23,7 +23,7 @@ function fixture(startCollapsed = false) {
     './KeyboardAwareScrollView': { KeyboardAwareScrollView: 'ScrollView' }, './TalentMap': { TalentMap: 'Map' },
     '../lib/mapSheet': load('../src/lib/mapSheet.ts'), '../ui': { useTheme: () => ({ colors: {} }) },
   });
-  function render() { state = 0; ref = 0; return MapExperience({ startCollapsed, map: { center: [77, 12], onSelect: person => selected.push(person.id) }, title: 'Professionals nearby', children: 'professionals', footer: 'Compare' }); }
+  function render() { state = 0; ref = 0; return MapExperience({ startCollapsed, carousel, map: { center: [77, 12], onSelect: person => selected.push(person.id) }, title: 'Professionals nearby', children: 'professionals', footer: 'Compare' }); }
   const selected = [];
   return { render, selected };
 }
@@ -72,6 +72,15 @@ test('mobile discovery starts collapsed and the header cycles through list sizes
   assert.equal(map(tree).props.overlayBottom,504);
   sheet(tree).props.children[1].props.onPress(); tree=f.render();
   assert.equal(map(tree).props.overlayBottom,116);
+});
+
+test('carousel floats above the map and camera padding follows the measured card panel', () => {
+  const f=fixture(false,true);let tree=f.render();
+  assert.equal(sheet(tree).props.testID,'map-carousel-panel');
+  assert.equal(sheet(tree).props.style.bottom,12);
+  assert.equal(sheet(tree).props.style.height,undefined,'cards determine height instead of a clipped sheet');
+  sheet(tree).props.onLayout({nativeEvent:{layout:{height:278}}});tree=f.render();
+  assert.equal(map(tree).props.overlayBottom,290);assert.equal(map(tree).props.cameraOverlayBottom,290);
 });
 
 test('map view controls stay hidden until requested and selecting a preset closes the panel', () => {

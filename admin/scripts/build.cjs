@@ -6,6 +6,7 @@ if(!url?.startsWith('https://')||!key||key.startsWith('sb_secret_'))throw Error(
 if(key.split('.').length===3&&JSON.parse(Buffer.from(key.split('.')[1],'base64url')).role!=='anon')throw Error('Only a public client key may enter the admin bundle');
 fs.mkdirSync(path.join(root,'dist'),{recursive:true});
 require('esbuild').buildSync({entryPoints:[path.join(root,'src/app.js')],bundle:true,minify:true,platform:'browser',format:'esm',target:['es2022'],outfile:path.join(root,'dist/app.js'),define:{__CIRCLE_SUPABASE_URL__:JSON.stringify(url),__CIRCLE_PUBLIC_KEY__:JSON.stringify(key)},sourcemap:false});
-for(const file of ['index.html','style.css'])fs.copyFileSync(path.join(root,'src',file),path.join(root,'dist',file));
+for(const file of ['launch-splash.js','launch-splash.html','index.html','style.css','profile.css','mobile.css','reference.css'])fs.copyFileSync(path.join(root,'src',file),path.join(root,'dist',file));
 fs.copyFileSync(path.join(mobile,'assets/brand/mark-black.svg'),path.join(root,'dist/logo.svg'));
+fs.cpSync(path.join(mobile,'assets/services'),path.join(root,'dist/service-defaults'),{recursive:true});
 console.log('Built Circle banner admin with public client configuration only.');

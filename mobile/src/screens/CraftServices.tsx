@@ -3,17 +3,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { bengaluru, categoryLabels, money, type Category, type Coordinate } from '../domain';
 import { useForegroundRefresh, useResource } from '../hooks';
 import { servicesForCategory } from '../lib/serviceCatalog';
-import { serviceDescriptions, serviceImages } from '../lib/servicePresentation';
+import { serviceDescriptions } from '../lib/servicePresentation';
+import { useServiceImages, useServiceNames } from '../lib/useServiceImages';
 import { serviceStartingPrices } from '../lib/serviceStartingPrices';
 import { Button, Icon, IconButton, Notice, useTheme, welcomeImages } from '../ui';
 
 export function ServiceOptions({ category, center, availableNow, onChoose }: { category: Category; center: Coordinate; availableNow: boolean; onChoose: (key: string) => void }) {
+  const serviceImages = useServiceImages();
+  const serviceNames = useServiceNames();
   const { styles, colors } = useTheme();
   const prices = useResource(() => serviceStartingPrices(category, center, availableNow), JSON.stringify([category, center, availableNow]), 'service-starting-prices');
   useForegroundRefresh(prices.refresh, 60000);
   return <View style={{ gap: 12 }}>
     <Notice message={prices.error} />{Boolean(prices.error) && <Button title="Retry prices" secondary onPress={prices.refresh} />}
-    {servicesForCategory(category).map(service => {
+    {servicesForCategory(category).map(original => {
+      const service = { ...original, label: serviceNames[original.key] || original.label };
       const price = prices.data?.[service.key];
       return <Pressable key={service.key} accessibilityRole="button" accessibilityLabel={`${service.label}, ${price != null ? `starts from ${money(price)}` : 'view availability'}`} onPress={() => onChoose(service.key)} style={({ pressed }) => ({ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 1, borderColor: colors.line, backgroundColor: pressed ? colors.selected : colors.panel })}>
         <View style={{ flex: 1, minWidth: 0, gap: 8 }}><Text style={[styles.heading, { fontSize: 16 }]}>{service.label}</Text><Text numberOfLines={2} style={[styles.muted, { fontSize: 12, lineHeight: 18 }]}>{serviceDescriptions[service.key]}</Text>

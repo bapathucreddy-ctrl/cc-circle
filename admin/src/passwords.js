@@ -1,0 +1,14 @@
+const check=r=>{if(r.error)throw r.error;return r.data;};
+export function passwordControls(db,onSaved){
+ const $=id=>document.getElementById(id);let saving=false;
+ function mode(value){$('password-login-form').hidden=value!=='password';$('login-form').hidden=value!=='email';$('code-form').hidden=true;for(const key of ['password','email'])$('login-'+key+'-tab').setAttribute('aria-pressed',String(key===value));$('auth-notice').textContent='';}
+ $('login-password-tab').onclick=()=>mode('password');$('login-email-tab').onclick=()=>mode('email');
+ $('password-login-form').onsubmit=async event=>{event.preventDefault();const button=$('password-sign-in');button.disabled=true;$('auth-notice').textContent='';try{check(await db.auth.signInWithPassword({email:$('password-email').value.trim(),password:$('login-password').value}));$('login-password').value='';}catch(e){$('auth-notice').textContent=e.message==='Invalid login credentials'?'Email or password is incorrect. For your first sign-in, use Google or an email link to create a password.':e.message;}finally{button.disabled=false;}};
+ $('show-login-password').onchange=()=>{$('login-password').type=$('show-login-password').checked?'text':'password';};
+ $('show-new-password').onchange=()=>{for(const id of ['new-password','confirm-password'])$(id).type=$('show-new-password').checked?'text':'password';};
+ function show(email,required=true){$('auth').hidden=true;$('denied').hidden=true;$('workspace').hidden=true;$('password-setup').hidden=false;$('setup-cancel').hidden=required;$('password-account').textContent=email||'';$('password-setup-notice').textContent='';$('new-password').value='';$('confirm-password').value='';$('show-new-password').checked=false;for(const id of ['new-password','confirm-password'])$(id).type='password';}
+ $('password-setup-form').onsubmit=async event=>{event.preventDefault();if(saving)return;const password=$('new-password').value;if(password.length<8){$('password-setup-notice').textContent='Use at least 8 characters.';return;}if(password!==$('confirm-password').value){$('password-setup-notice').textContent='Passwords do not match.';return;}saving=true;$('save-password').disabled=true;try{check(await db.auth.updateUser({password}));$('new-password').value='';$('confirm-password').value='';$('password-setup').hidden=true;await onSaved();}catch(e){$('password-setup-notice').textContent=e.message;}finally{saving=false;$('save-password').disabled=false;}};
+ $('setup-sign-out').onclick=()=>{if(!saving)$('sign-out').click();};
+ $('setup-cancel').onclick=()=>{if(!saving){$('password-setup').hidden=true;$('workspace').hidden=false;$('new-password').value='';$('confirm-password').value='';}};
+ return{show,reset(){mode('password');$('password-setup').hidden=true;$('login-password').value='';$('new-password').value='';$('confirm-password').value='';}};
+}

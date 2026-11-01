@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-31",
+  "scope": [
+    "private registered professional bases",
+    "online and offline discovery within 5–10 km",
+    "searchable map pin selection",
+    "admin-approved bulk requests",
+    "first-name public identity",
+    "portrait moderation and manual review",
+    "mandatory photographer equipment and editing software"
+  ],
+  "verification": {
+    "mobileTests": 168,
+    "backendTests": 29,
+    "adminTests": 5,
+    "typescript": "passed",
+    "adminBuild": "passed",
+    "whitespaceCheck": "passed"
+  },
+  "productionMigrationApplied": true,
+  "edgeFunctionDeployed": true,
+  "apksGenerated": true,
+  "deviceTested": false,
+  "rolloutGuide": "docs/professional-discovery-and-bulk-approval.md",
+  "version": "0.2.1",
+  "productionAccessChecks": "passed",
+  "hostedPrivacyPublished": true,
+  "occasionServiceSearch": true,
+  "hostedPrivacyURL": "https://circle-policies-cclabs.web.app",
+  "hostedPrivacySha256": "d3381fc37989b7ccc1dc9fdd0b0684693a8a45ce802873b361c765e217edebeb"
+}

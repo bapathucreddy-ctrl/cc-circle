@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -21,7 +22,7 @@ test('live availability respects private bookings, overlapping requests, overrun
       await db.exec('set role authenticated'); await db.query("select set_config('request.jwt.claim.sub',$1,false)", [user]);
       try { return await run(); } finally { await db.exec('reset role'); }
     }
-    await as(talent, () => db.query('select public.save_professional_profile($1,$2,$3)', [
+    await as(talent, () => saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)', [
       { display_name: 'Availability Artist', category: 'Actor', city: 'Bengaluru', bio: 'Experienced performer checking availability and scheduling.', specialties: [], longitude: 77.64, latitude: 12.978, portfolio_urls: ['https://example.com/work'] },
       {}, { name: 'Performance', amount_paise: 500000, duration_minutes: 60 },
     ]));

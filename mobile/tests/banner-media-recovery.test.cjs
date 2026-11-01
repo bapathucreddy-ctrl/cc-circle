@@ -6,7 +6,7 @@ const ts = require('typescript');
 function load(file, dependencies = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve(file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
-    exports, URL, atob, Date, require: name => dependencies[name] || {},
+    exports, URL, atob, Date, require: name => dependencies[name] || (name === '../lib/useServiceImages' ? { useServiceImages: () => dependencies['../lib/servicePresentation']?.serviceImages || {}, useServiceNames: () => ({}) } : {}),
   });
   return exports;
 }
@@ -36,6 +36,7 @@ test('uploaded artwork uses its public marketing URL, original proportions and c
     '../lib/serviceCatalog':load('../src/lib/serviceCatalog.ts'),'../lib/campaignColors':load('../src/lib/campaignColors.ts'),'../lib/servicePresentation':{serviceImages:{}},
     '../ui':{welcomeImages:{},useTheme:()=>({colors:{panel:'#ffffff'}})},
   });
+  campaign.featured_heading='Halloween picks';
   const calls=[];const tree=OccasionBanners({onChoose:(...args)=>calls.push(args)});
   const hero=tree.props.children[1].props.children[0];
   assert.equal(tree.props.style.backgroundColor,'#E0A090');
@@ -43,6 +44,7 @@ test('uploaded artwork uses its public marketing URL, original proportions and c
   assert.equal(hero.props.children.props.source.uri,'https://example.test/owner/art.png');
   assert.equal(hero.props.children.props.resizeMode,'contain');
   function nodes(node){if(Array.isArray(node))return node.flatMap(nodes);if(!node||typeof node!=='object')return [];return [node,...nodes(node.props?.children)];}
+  assert.ok(nodes(tree).some(node=>node.type==='Text'&&node.props.children==='Halloween picks'));
   const picks=nodes(tree).filter(node=>node.type==='Pressable' && node.props.accessibilityLabel?.startsWith('Explore '));
   assert.deepEqual(picks.map(node=>node.props.accessibilityLabel),['Explore Bridal makeup','Explore Wedding photography','Explore Photo editing']);
   picks[2].props.onPress();assert.equal(calls.pop()[0],'Editor');

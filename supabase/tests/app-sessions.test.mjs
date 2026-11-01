@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
@@ -42,7 +43,7 @@ test('late activation, release and forged session identities cannot affect a new
 
 test('professional takeover clears the old pin; old cleanup cannot erase the new location',()=>fixture(async({db,user,ids,as,activate})=>{
  const [old,customer,newPro]=ids;await activate(old,'professional');
- await as(old,()=>db.query('select public.save_professional_profile($1,$2,$3)',[{display_name:'Lens Studio',category:'Photographer',city:'Bengaluru',bio:'A professional photographer for events and editorial work.',specialties:['Portrait'],longitude:77.64,latitude:12.97,portfolio_urls:['https://example.com/work'],public_specs:{}},{},{name:'Portrait session',amount_paise:500000,duration_minutes:60}]));
+ await as(old,()=>saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)',[{display_name:'Lens Studio',category:'Photographer',city:'Bengaluru',bio:'A professional photographer for events and editorial work.',specialties:['Portrait'],longitude:77.64,latitude:12.97,portfolio_urls:['https://example.com/work'],public_specs:{}},{},{name:'Portrait session',amount_paise:500000,duration_minutes:60}]));
  await db.query('update public.professionals set is_published=true,available_now=true where id=$1',[user]);
  await as(old,()=>db.query('select public.publish_professional_location_fix(77.64,12.97,10)'));
  await activate(customer,'customer');assert.equal((await db.query('select count(*)::int n from private.professional_live_locations')).rows[0].n,1,'customer login leaves professional GPS alone');

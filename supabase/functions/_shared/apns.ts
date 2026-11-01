@@ -19,14 +19,14 @@ export async function apnsAuthorization(account: ApnsAccount) {
   cached = { identity, token, expiresAt: Date.now() + 50 * 60000 };
   return token;
 }
-export function apnsRequest(token: string, environment: ApnsEnvironment, variant: string, notificationId: string, title: string, authorization: string) {
+export function apnsRequest(token: string, environment: ApnsEnvironment, variant: string, notificationId: string, title: string, authorization: string, promotionBody?: string) {
   if (!/^[a-f0-9]{32,512}$/i.test(token) || token.length % 2 || !['sandbox', 'production'].includes(environment) || !['customer', 'professional'].includes(variant)) throw new Error('Invalid APNs device');
   return {
     url: `https://${environment === 'sandbox' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com'}/3/device/${token}`,
     options: {
       method: 'POST',
       headers: { authorization: `bearer ${authorization}`, 'content-type': 'application/json', 'apns-topic': `com.cccircle.${variant}`, 'apns-push-type': 'alert', 'apns-priority': '10', 'apns-expiration': String(Math.floor(Date.now() / 1000) + 3600), 'apns-collapse-id': notificationId },
-      body: JSON.stringify({ aps: { alert: { title: `Circle · ${title}`, body: 'Open Circle for the latest update.' }, sound: 'default' }, notification_id: notificationId }),
+      body: JSON.stringify({ aps: { alert: { title: title==='Artist House' ? title : `Artist House · ${title}`, body: promotionBody || 'Open Artist House for the latest update.' }, ...(promotionBody ? {} : {sound: 'default'}) }, notification_id: notificationId }),
       signal: AbortSignal.timeout(10000),
     },
   };

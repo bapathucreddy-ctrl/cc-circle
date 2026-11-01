@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CC Circle BTS Reel Renderer</title>
+  <style>
+    body { background: #0a0a0f; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+    canvas { max-height: 95vh; max-width: 95vw; aspect-ratio: 9/16; }
+    #status { margin-top: 10px; font-size: 13px; color: #38bdf8; font-family: monospace; color: #fff; }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="status">Initializing…</div>
+<script>
+const C = document.getElementById('c');
+const ctx = C.getContext('2d');
+const ST = document.getElementById('status');
+const W = 1080, H = 1920, FPS = 30, DUR = 18; // 18 seconds per reel
+
+// ═══════════════════════════════════════════════════════
+//  REAL SOURCE CODE FROM CC CIRCLE PROJECT
+// ═══════════════════════════════════════════════════════
+const campaigns = [
+  {
+    id: 'reel-1-3d-gps-tracking',
+    hook: "POV: Building live GPS tracking for Bangalore's creative pros 🛵",
+    file: 'TalentMap.tsx',
+    tag: '@rnmapbox/maps  •  React Native',
+    accent: '#38bdf8',
+    appScreen: 'map',
+    codeLines: [
+      "import Mapbox from '@rnmapbox/maps';",
+      "import {routePose} from '../lib/routePose';",
+      "import {useNavigationHeading} from './useNavigationHeading';",
+      "",
+      "export function TalentMap({",
+      "  center: rawCenter,",
+      "  tracking = false,",
+      "  route, destination,",
+      "  immersive = false,",
+      "}: TalentMapProps) {",
+      "",
+      "  const pose = useMemo(() =>",
+      "    routePose(rawCenter,",
+      "      tracking ? route : undefined),",
+      "    [rawCenter[0], rawCenter[1],",
+      "      route, tracking]",
+      "  );",
+      "  const center = tracking",
+      "    ? pose.point : rawCenter;",
+      "",
+      "  const journeyHeading =",
+      "    useNavigationHeading(",
+      "      center,",
+      "      pose.heading ?? reportedHeading,",
+      "      route",
+      "    );",
+      "",
+      "  useEffect(() => {",
+      "    if (!ready) return;",
+      "    camera.current?.setCamera({",
+      "      centerCoordinate: center,",
+      "      pitch: tracking ? nav.pitch : 55,",
+      "      heading: aerial ? 0 : heading,",
+      "      zoomLevel: tracking",
+      "        ? nav.zoom : 15.5,",
+      "      animationDuration: 700,",
+      "    });",
+      "  }, [ready, center[0], center[1]]);",
+      "",
+      "  return (",
+      "    <Mapbox.MapView",
+      "      styleURL={standardMapStyle}",
+      "      onDidFinishLoadingMap={",
+      "        () => setReady(true)",
+      "      }>",
+      "      <Mapbox.Camera ref={camera}",
+      "        defaultSettings={{",
+      "          zoomLevel: nav.zoom,",
+      "          pitch: nav.pitch",
+      "        }}/>",
+      "      <Mapbox.ShapeSource",
+      "        id=\"booking-route\"",
+      "        shape={{ type:'Feature',",
+      "          geometry:{ type:'LineString',",
+      "            coordinates: route }",
+      "        }}>",
+      "        <Mapbox.LineLayer",
+      "          id=\"route-line\"",
+      "          style={{",
+      "            lineColor: mapRouteColor(lightPreset),",
+      "            lineWidth: 5,",
+      "            lineCap: 'round'",
+      "          }}/>",
+      "      </Mapbox.ShapeSource>",
+      "    </Mapbox.MapView>",
+      "  );",
+      "}",
+    ]
+  },
+  {
+    id: 'reel-2-booking-payments',
+    hook: "Escrow payment + real-time tracking built in React Native ⚡",
+    file: 'payments.ts',
+    tag: 'Cashfree SDK  •  Supabase Realtime',
+    accent: '#a78bfa',
+    appScreen: 'booking',
+    codeLines: [
+      "import { CFPaymentGatewayService }",
+      "  from 'react-native-cashfree-pg-sdk';",
+      "import { CFEnvironment, CFSession }",
+      "  from 'cashfree-pg-api-contract';",
+      "import { supabase } from './supabase';",
+      "",
+      "export async function openPayment(",
+      "  bookingId: string,",
+      "  onVerified: () => void,",
+      "  onError: (msg: string) => void",
+      ") {",
+      "  const { data, error } =",
+      "    await supabase.functions.invoke(",
+      "      'cashfree-order',",
+      "      { body: { booking_id: bookingId } }",
+      "    );",
+      "  if (error) throw new Error(",
+      "    'Unable to start payment.'",
+      "  );",
+      "  if (data.paid) {",
+      "    onVerified(); return;",
+      "  }",
+      "",
+      "  CFPaymentGatewayService.setCallback({",
+      "    onVerify: async (orderId) => {",
+      "      const { data: r } =",
+      "        await supabase.functions.invoke(",
+      "          'cashfree-verify',",
+      "          { body: {",
+      "              booking_id: bookingId,",
+      "              order_id: orderId",
+      "            }",
+      "          }",
+      "        );",
+      "      if (!r?.paid) throw new Error(",
+      "        'Payment confirming. Refresh soon.'",
+      "      );",
+      "      onVerified();",
+      "    },",
+      "    onError: () => {",
+      "      CFPaymentGatewayService",
+      "        .removeCallback();",
+      "      onError('Payment not completed.');",
+      "    },",
+      "  });",
+      "",
+      "  CFPaymentGatewayService.doWebPayment(",
+      "    new CFSession(",
+      "      data.payment_session_id,",
+      "      data.order_id,",
+      "      data.environment === 'production'",
+      "        ? CFEnvironment.PRODUCTION",
+      "        : CFEnvironment.SANDBOX",
+      "    )",
+      "  );",
+      "}",
+    ]
+  },
+  {
+    id: 'reel-3-marketplace',
+    hook: "India's creative pro marketplace — built with ❤️ in React Native",
+    file: 'Marketplace.tsx',
+    tag: 'Expo  •  Supabase  •  React Native',
+    accent: '#34d399',
+    appScreen: 'marketplace',
+    codeLines: [
+      "import { OccasionBanners }",
+      "  from '../components/OccasionBanners';",
+      "import { LocationPicker }",
+      "  from '../components/LocationPicker';",
+      "import { visibleCategories }",
+      "  from '../lib/serviceCatalog';",
+      "",
+      "export function Home({",
+      "  center, setCenter,",
+      "  locationLabel,",
+      "  onLocationChange,",
+      "  onDiscover, onBooking,",
+      "}: HomeProps) {",
+      "",
+      "  const { colors, styles } = useTheme();",
+      "  const [timing, setTiming] =",
+      "    useState('now');",
+      "  const [query, setQuery] = useState('');",
+      "",
+      "  const recent = useResource(",
+      "    api.myBookings, 'mine', 'bookings'",
+      "  );",
+      "  useForegroundRefresh(recent.refresh);",
+      "",
+      "  const upcoming = recent.data?.filter(",
+      "    b => ['requested','accepted',",
+      "      'en_route','arrived']",
+      "      .includes(b.status)",
+      "  ).slice(0, 2) || [];",
+      "",
+      "  const tiles = visibleCategories.map(",
+      "    category => ({",
+      "      id: category,",
+      "      label: categoryLabels[category],",
+      "      onPress: () =>",
+      "        setSelectedCraft(category)",
+      "    })",
+      "  );",
+      "",
+      "  const search = () =>",
+      "    onDiscover(undefined,",
+      "      timing === 'now', query);",
+      "",
+      "  return (",
+      "    <ScrollView style={{",
+      "      backgroundColor: colors.panel",
+      "    }}>",
+      "      <OccasionBanners",
+      "        onColorChange={updateBannerColor}",
+      "        onChoose={(cat, key) =>",
+      "          key",
+      "            ? onDiscover(cat,",
+      "                timing==='now',",
+      "                undefined, key)",
+      "            : setSelectedCraft(cat)",
+      "        }>",
+      "        <Brand compact={!wide}",
+      "          foregroundColor={",
+      "            bannerForeground",
+      "          }/>",
+      "        <LocationPicker compact",
+      "          center={center}",
+      "          label={locationLabel}",
+      "          onSelect={onLocationChange}/>",
+      "      </OccasionBanners>",
+      "    </ScrollView>",
+      "  );",
+      "}",
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: MacBook Laptop Frame
+// ═══════════════════════════════════════════════════════
+function drawMacBook(ctx, x, y, w, h) {
+  const lid_h = h * 0.88;
+  const base_h = h * 0.12;
+  const bezel = 14;
+
+  // Lid (screen part) — silver aluminum
+  const lidGrad = ctx.createLinearGradient(x, y, x, y + lid_h);
+  lidGrad.addColorStop(0, '#d0d0d8');
+  lidGrad.addColorStop(0.5, '#c8c8d0');
+  lidGrad.addColorStop(1, '#b8b8c0');
+  ctx.fillStyle = lidGrad;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, lid_h, [14, 14, 4, 4]);
+  ctx.fill();
+
+  // Screen black border
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.roundRect(x + bezel, y + bezel, w - bezel*2, lid_h - bezel*1.5, [6,6,2,2]);
+  ctx.fill();
+
+  // Screen area (returned as coords for content)
+  const sx = x + bezel + 2, sy = y + bezel + 2;
+  const sw = w - bezel*2 - 4, sh = lid_h - bezel*1.5 - 4;
+
+  // Camera dot
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(x + w/2, y + 9, 3, 0, Math.PI*2); ctx.fill();
+
+  // Base (keyboard deck)
+  const baseGrad = ctx.createLinearGradient(x, y + lid_h, x, y + lid_h + base_h);
+  baseGrad.addColorStop(0, '#c0c0c8');
+  baseGrad.addColorStop(1, '#a8a8b0');
+  ctx.fillStyle = baseGrad;
+  ctx.beginPath();
+  ctx.roundRect(x, y + lid_h, w, base_h, [0, 0, 8, 8]);
+  ctx.fill();
+
+  // Keyboard hint
+  ctx.fillStyle = 'rgba(80,80,90,0.4)';
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 12; c++) {
+      const kx = x + 16 + c * ((w-32)/12);
+      const ky = y + lid_h + 4 + r * 11;
+      ctx.beginPath();
+      ctx.roundRect(kx, ky, (w-32)/12 - 3, 8, 2);
+      ctx.fill();
+    }
+  }
+
+  // Trackpad
+  ctx.fillStyle = 'rgba(80,80,90,0.25)';
+  ctx.beginPath();
+  ctx.roundRect(x + w/2 - 45, y + lid_h + base_h - 22, 90, 16, 4);
+  ctx.fill();
+
+  return { sx, sy, sw, sh };
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: VS Code inside MacBook screen
+// ═══════════════════════════════════════════════════════
+function drawVSCode(ctx, sx, sy, sw, sh, campaign, charReveal) {
+  const accent = campaign.accent;
+  // Background
+  ctx.fillStyle = '#1e1e2e';
+  ctx.fillRect(sx, sy, sw, sh);
+
+  // Title bar (macOS style)
+  ctx.fillStyle = '#181825';
+  ctx.fillRect(sx, sy, sw, 22);
+  ['#ff5f57','#febc2e','#28c840'].forEach((c, i) => {
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(sx + 10 + i*16, sy + 11, 5, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.fillStyle = '#45475a';
+  ctx.font = "10px -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("CC Circle — Visual Studio Code", sx + sw/2, sy + 15);
+
+  // Activity bar (left strip)
+  ctx.fillStyle = '#181825';
+  ctx.fillRect(sx, sy + 22, 28, sh - 22);
+  ['⎇','🔍','📁','🔧','🧩'].forEach((icon, i) => {
+    ctx.fillStyle = i === 0 ? accent : '#45475a';
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(icon, sx + 14, sy + 50 + i * 26);
+  });
+
+  // Side explorer panel
+  const explorerW = 120;
+  ctx.fillStyle = '#181825';
+  ctx.fillRect(sx + 28, sy + 22, explorerW, sh - 22);
+  ctx.fillStyle = '#cdd6f4';
+  ctx.font = "bold 8px -apple-system, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("EXPLORER", sx + 32, sy + 38);
+  // File tree
+  const files = [
+    { name: 'CC-CIRCLE', indent: 0, folder: true },
+    { name: 'mobile/src', indent: 1, folder: true },
+    { name: '  components', indent: 2, folder: true },
+    { name: '  screens', indent: 2, folder: true },
+    { name: '  lib', indent: 2, folder: true },
+    { name: campaign.file, indent: 3, active: true },
+    { name: 'payments.ts', indent: 3 },
+    { name: 'BookingDetail.tsx', indent: 3 },
+    { name: 'Marketplace.tsx', indent: 3 },
+  ];
+  files.forEach((f, i) => {
+    if (f.active) {
+      ctx.fillStyle = accent + '33';
+      ctx.fillRect(sx + 28, sy + 46 + i * 14, explorerW, 14);
+    }
+    ctx.fillStyle = f.active ? accent : f.folder ? '#cdd6f4' : '#a6adc8';
+    ctx.font = `${f.active ? 'bold' : 'normal'} 8px -apple-system, monospace`;
+    ctx.fillText((f.folder ? '📁 ' : '  ') + f.name.trim(), sx + 34 + f.indent * 6, sy + 57 + i * 14);
+  });
+
+  // Tab bar
+  const codeX = sx + 28 + explorerW;
+  const codeW = sw - 28 - explorerW;
+  ctx.fillStyle = '#181825';
+  ctx.fillRect(codeX, sy + 22, codeW, 20);
+  ctx.fillStyle = '#1e1e2e';
+  ctx.fillRect(codeX, sy + 22, 140, 20);
+  ctx.fillStyle = accent;
+  ctx.fillRect(codeX, sy + 40, 140, 2);
+  ctx.fillStyle = '#cdd6f4';
+  ctx.font = "9px 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.fillText('  ' + campaign.file, codeX + 4, sy + 35);
+
+  // Status bar
+  ctx.fillStyle = '#313244';
+  ctx.fillRect(codeX, sy + sh - 16, codeW, 16);
+  ctx.fillStyle = accent;
+  ctx.font = "8px monospace";
+  ctx.fillText('  ⎇ circle-app-updates  ✓ TypeScript  ✓ 157 tests passing', codeX + 4, sy + sh - 5);
+
+  // Code area
+  const lh = 13; // line height
+  const codeAreaY = sy + 42;
+  const codeAreaH = sh - 42 - 16;
+  ctx.fillStyle = '#1e1e2e';
+  ctx.fillRect(codeX, codeAreaY, codeW, codeAreaH);
+
+  // Line numbers gutter
+  ctx.fillStyle = '#181825';
+  ctx.fillRect(codeX, codeAreaY, 28, codeAreaH);
+
+  // Render code lines with syntax highlight
+  const totalChars = campaign.codeLines.join('\n').length;
+  const revealed = Math.floor(charReveal * totalChars);
+  let charsSeen = 0;
+  const maxLines = Math.floor(codeAreaH / lh) - 1;
+
+  for (let i = 0; i < Math.min(campaign.codeLines.length, maxLines); i++) {
+    const line = campaign.codeLines[i];
+    const lineStart = charsSeen;
+    charsSeen += line.length + 1;
+    if (lineStart > revealed) break;
+
+    // Line number
+    ctx.fillStyle = '#585b70';
+    ctx.font = "8px 'Courier New', monospace";
+    ctx.textAlign = "right";
+    ctx.fillText(String(i + 1), codeX + 26, codeAreaY + i * lh + 10);
+    ctx.textAlign = "left";
+
+    // Active line highlight
+    const isActiveLine = (lineStart <= revealed && charsSeen > revealed);
+    if (isActiveLine) {
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillRect(codeX + 28, codeAreaY + i * lh, codeW - 28, lh);
+    }
+
+    const visLine = line.slice(0, Math.max(0, revealed - lineStart));
+    if (!visLine && i > 0) continue;
+
+    // Syntax color
+    let color = '#cdd6f4';
+    const t = line.trim();
+    if (t.startsWith('//')) color = '#6c7086';
+    else if (/^(import|export|from|return|const|let|var|function|async|await|if|else|type|interface)\b/.test(t)) color = '#cba6f7';
+    else if (/"[^"]*"|'[^']*'|`[^`]*`/.test(t)) color = '#a6e3a1';
+    else if (/\b(useState|useEffect|useMemo|useCallback|useRef|useResource|useTheme|useForegroundRefresh|useNavigationHeading|useTrackingPoint)\b/.test(t)) color = '#89b4fa';
+    else if (/^[A-Z]/.test(t)) color = '#89dceb';
+
+    ctx.fillStyle = color;
+    ctx.font = "9px 'Courier New', monospace";
+    ctx.fillText(visLine, codeX + 30, codeAreaY + i * lh + 10);
+
+    // Cursor
+    if (isActiveLine) {
+      const cx = codeX + 30 + ctx.measureText(visLine).width;
+      if (Math.floor(Date.now() / 450) % 2 === 0) {
+        ctx.fillStyle = accent;
+        ctx.fillRect(cx, codeAreaY + i * lh + 1, 2, lh - 2);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: iOS Simulator Window
+// ═══════════════════════════════════════════════════════
+function drawSimulatorWindow(ctx, x, y, w, h, campaign, t) {
+  const accent = campaign.accent;
+  // Simulator app window chrome
+  ctx.fillStyle = '#2d2d2d';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, [10,10,10,10]); ctx.fill();
+
+  // Window title bar
+  const tbH = 26;
+  const tbGrad = ctx.createLinearGradient(x, y, x, y + tbH);
+  tbGrad.addColorStop(0, '#4a4a4a');
+  tbGrad.addColorStop(1, '#3a3a3a');
+  ctx.fillStyle = tbGrad;
+  ctx.beginPath(); ctx.roundRect(x, y, w, tbH, [10,10,0,0]); ctx.fill();
+
+  ['#ff5f57','#febc2e','#28c840'].forEach((c, i) => {
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(x + 12 + i*18, y + 13, 5.5, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.fillStyle = '#c0c0c0';
+  ctx.font = "bold 11px -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Simulator — iPhone 16 Pro Max — iOS 18.2", x + w/2, y + 17);
+
+  // Simulator toolbar
+  const tbY = y + tbH;
+  ctx.fillStyle = '#363636';
+  ctx.fillRect(x, tbY, w, 28);
+  ['📱','⬅️','➡️','🔄','📸'].forEach((icon, i) => {
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(icon, x + 8 + i * 26, tbY + 18);
+  });
+  ctx.fillStyle = '#888';
+  ctx.font = "10px -apple-system, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText("Zoom: 75%  •  cc.circle/customer", x + w - 8, tbY + 18);
+
+  // Phone device inside simulator
+  const devX = x + w/2 - (w-32)/2;
+  const devY = y + tbH + 28 + 10;
+  const devW = w - 32;
+  const devH = h - tbH - 28 - 20;
+  drawiPhoneDevice(ctx, devX, devY, devW, devH, campaign, t);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: iPhone device shell inside simulator
+// ═══════════════════════════════════════════════════════
+function drawiPhoneDevice(ctx, x, y, w, h, campaign, t) {
+  const accent = campaign.accent;
+  // Body — titanium style
+  const bodyGrad = ctx.createLinearGradient(x, y, x+w, y+h);
+  bodyGrad.addColorStop(0, '#2a2a2e');
+  bodyGrad.addColorStop(1, '#1a1a1e');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 28); ctx.fill();
+  ctx.strokeStyle = '#4a4a5a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 28); ctx.stroke();
+
+  // Side buttons
+  ctx.fillStyle = '#3a3a4a';
+  ctx.fillRect(x - 3, y + 80, 3, 32); // vol
+  ctx.fillRect(x - 3, y + 124, 3, 32);
+  ctx.fillRect(x + w, y + 100, 3, 52); // power
+
+  // Screen inset
+  const sx = x + 7, sy = y + 8, sw = w - 14, sh = h - 16;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.roundRect(sx, sy, sw, sh, 22); ctx.fill();
+
+  // Status bar
+  ctx.fillStyle = '#111';
+  ctx.fillRect(sx, sy, sw, 26);
+  ctx.fillStyle = '#fff';
+  ctx.font = "bold 9px -apple-system, sans-serif";
+  ctx.textAlign = "left";
+  const now = new Date();
+  ctx.fillText(`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`, sx + 10, sy + 17);
+  ctx.textAlign = "right";
+  ctx.fillStyle = '#fff';
+  ctx.font = "8px -apple-system, sans-serif";
+  ctx.fillText('●●●  ▶  100%', sx + sw - 8, sy + 17);
+
+  // Dynamic island
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.roundRect(sx + sw/2 - 40, sy, 80, 20, [0,0,14,14]); ctx.fill();
+
+  // App content
+  const appY = sy + 26;
+  const appH = sh - 26;
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(sx, appY, sw, appH, [0,0,22,22]); ctx.clip();
+
+  if (campaign.appScreen === 'map') drawAppMap(ctx, sx, appY, sw, appH, t, accent);
+  else if (campaign.appScreen === 'booking') drawAppBooking(ctx, sx, appY, sw, appH, t, accent);
+  else drawAppMarketplace(ctx, sx, appY, sw, appH, t, accent);
+
+  ctx.restore();
+
+  // Home indicator
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.roundRect(sx + sw/2 - 40, sy + sh - 8, 80, 4, 2); ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════════
+//  APP SCREENS
+// ═══════════════════════════════════════════════════════
+function drawAppMap(ctx, x, y, w, h, t, accent) {
+  // Dark map background
+  const mg = ctx.createLinearGradient(x, y, x, y+h);
+  mg.addColorStop(0, '#0b1220'); mg.addColorStop(1, '#111b2e');
+  ctx.fillStyle = mg; ctx.fillRect(x, y, w, h);
+
+  // Grid streets
+  ctx.strokeStyle = 'rgba(148,163,184,0.1)'; ctx.lineWidth = 0.8;
+  for (let gx = x; gx < x+w; gx += 18) { ctx.beginPath(); ctx.moveTo(gx,y); ctx.lineTo(gx,y+h); ctx.stroke(); }
+  for (let gy = y; gy < y+h; gy += 18) { ctx.beginPath(); ctx.moveTo(x,gy); ctx.lineTo(x+w,gy); ctx.stroke(); }
+
+  // City blocks
+  [[0.05,0.05,0.3,0.12],[0.42,0.02,0.35,0.1],[0.72,0.08,0.22,0.1],[0.03,0.25,0.25,0.14],[0.58,0.2,0.38,0.16],[0.1,0.45,0.35,0.16],[0.52,0.44,0.28,0.14],[0.08,0.65,0.42,0.12],[0.58,0.62,0.32,0.16]].forEach(([bx,by,bw,bh])=>{
+    ctx.fillStyle='rgba(20,32,50,0.9)'; ctx.fillRect(x+bx*w,y+by*h,bw*w,bh*h);
+    ctx.strokeStyle='rgba(40,60,90,0.7)'; ctx.lineWidth=0.5; ctx.strokeRect(x+bx*w,y+by*h,bw*w,bh*h);
+  });
+
+  // Mapbox branding-style label
+  ctx.fillStyle='rgba(255,255,255,0.25)';ctx.font='7px sans-serif';ctx.textAlign='left';
+  ctx.fillText('© Mapbox © OpenStreetMap',x+4,y+h-4);
+
+  // Route with animation
+  const route = [[0.12,0.92],[0.18,0.78],[0.28,0.64],[0.35,0.52],[0.48,0.42],[0.55,0.32],[0.6,0.22],[0.66,0.15]];
+  ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.setLineDash([6,3]); ctx.lineDashOffset = -(t % 4) * 12;
+  ctx.beginPath();
+  route.forEach(([px,py],i)=>{ const rx=x+px*w,ry=y+py*h; i===0?ctx.moveTo(rx,ry):ctx.lineTo(rx,ry); });
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Animated rider on route
+  const prog = ((t*0.6) % 1);
+  const ri = Math.min(Math.floor(prog*(route.length-1)),route.length-2);
+  const rf = prog*(route.length-1)-ri;
+  const rrx = x+(route[ri][0]+(route[ri+1][0]-route[ri][0])*rf)*w;
+  const rry = y+(route[ri][1]+(route[ri+1][1]-route[ri][1])*rf)*h;
+  const gr = ctx.createRadialGradient(rrx,rry,0,rrx,rry,16);
+  gr.addColorStop(0,accent+'88');gr.addColorStop(1,'transparent');
+  ctx.fillStyle=gr;ctx.beginPath();ctx.arc(rrx,rry,16,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=accent;ctx.beginPath();ctx.arc(rrx,rry,7,0,Math.PI*2);ctx.fill();
+  ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('🛵',rrx,rry+4);
+
+  // Pro pins
+  [[0.3,0.45,'📸'],[0.55,0.55,'💄'],[0.4,0.3,'🎬']].forEach(([px,py,em])=>{
+    const px2=x+px*w,py2=y+py*h;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px2,py2,9,0,Math.PI*2);ctx.fill();
+    ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(em,px2,py2+4);
+  });
+
+  // Destination pin
+  const dp=route[route.length-1]; const dpx=x+dp[0]*w,dpy=y+dp[1]*h;
+  ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(dpx,dpy,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('📍',dpx,dpy+4);
+
+  // ETA bottom sheet
+  const bsH = Math.min(h * 0.28, 110);
+  const bsY = y + h - bsH;
+  ctx.fillStyle = 'rgba(0,0,0,0.92)';
+  ctx.beginPath(); ctx.roundRect(x, bsY, w, bsH, [14,14,0,0]); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.2)';
+  ctx.beginPath();ctx.roundRect(x+w/2-24,bsY+6,48,3,2);ctx.fill();
+  ctx.fillStyle=accent;ctx.font='bold 11px -apple-system,sans-serif';ctx.textAlign='left';
+  ctx.fillText('🛵  En Route · 4 min · 1.2 km',x+10,bsY+24);
+  ctx.fillStyle='#94a3b8';ctx.font='9px -apple-system,sans-serif';
+  ctx.fillText('Ravi Kumar (Photographer) is on the way',x+10,bsY+40);
+  ctx.fillStyle='#1e293b';ctx.beginPath();ctx.roundRect(x+8,bsY+48,w/2-16,28,8);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('📞  Call Ravi',x+w/4,bsY+66);
+  ctx.fillStyle=accent;ctx.beginPath();ctx.roundRect(x+w/2+8,bsY+48,w/2-16,28,8);ctx.fill();
+  ctx.fillStyle='#000';ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('💬  Chat',x+3*w/4,bsY+66);
+}
+
+function drawAppBooking(ctx, x, y, w, h, t, accent) {
+  ctx.fillStyle='#0f0f1a';ctx.fillRect(x,y,w,h);
+  // Nav bar
+  ctx.fillStyle='#1a1a2e';ctx.fillRect(x,y,w,40);
+  ctx.fillStyle='#fff';ctx.font='bold 12px -apple-system,sans-serif';ctx.textAlign='center';
+  ctx.fillText('Booking · CC-4821',x+w/2,y+26);
+  ctx.fillStyle='#38bdf8';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='left';
+  ctx.fillText('< Back',x+8,y+26);
+
+  // Status
+  const statuses=['requested','accepted','en_route','arrived'];
+  const si=Math.floor((t/3)%statuses.length);
+  const sc={requested:'#f59e0b',accepted:'#3b82f6',en_route:accent,arrived:'#8b5cf6'}[statuses[si]]||accent;
+  ctx.fillStyle=sc+'33';ctx.beginPath();ctx.roundRect(x+w/2-50,y+48,100,20,10);ctx.fill();
+  ctx.fillStyle=sc;ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';
+  ctx.fillText(statuses[si].replace('_',' ').toUpperCase(),x+w/2,y+62);
+
+  // Info rows
+  [['📸','Photography Session','Priya M. · 4 hours'],['📍','Indiranagar, Bengaluru','2.3 km from you'],['💰','₹2,500','Secured in Cashfree Escrow'],['⏰','Booking #CC-4821','Accepted  •  Oct 21, 2026']].forEach(([ic,title,sub],i)=>{
+    const cy=y+78+i*54;
+    ctx.fillStyle='#1e293b';ctx.beginPath();ctx.roundRect(x+6,cy,w-12,46,8);ctx.fill();
+    ctx.font='14px sans-serif';ctx.textAlign='left';ctx.fillText(ic,x+12,cy+28);
+    ctx.fillStyle='#e2e8f0';ctx.font='bold 9px -apple-system,sans-serif';ctx.fillText(title,x+30,cy+20);
+    ctx.fillStyle='#64748b';ctx.font='8px -apple-system,sans-serif';ctx.fillText(sub,x+30,cy+36);
+  });
+
+  // Live realtime indicator
+  const pulse=Math.sin(t*4)*0.4+0.6;
+  const rtY=y+300;
+  ctx.fillStyle='#1a2a1a';ctx.beginPath();ctx.roundRect(x+6,rtY,w-12,38,8);ctx.fill();
+  ctx.fillStyle=`rgba(16,185,129,${pulse})`;ctx.beginPath();ctx.arc(x+18,rtY+19,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#10b981';ctx.font='bold 8px monospace';ctx.textAlign='left';
+  ctx.fillText('LIVE  supabase.channel("booking-4821")',x+28,rtY+15);
+  ctx.fillStyle='#475569';ctx.font='7px monospace';
+  ctx.fillText('.on("postgres_changes", { table: "bookings" })',x+28,rtY+28);
+
+  // Map mini preview
+  const mapY=y+348;const mapH=Math.min(h*0.22,90);
+  ctx.fillStyle='#0b1220';ctx.beginPath();ctx.roundRect(x+6,mapY,w-12,mapH,8);ctx.fill();
+  ctx.strokeStyle='rgba(148,163,184,0.1)';ctx.lineWidth=0.5;
+  for(let gx=x+6;gx<x+w-6;gx+=12){ctx.beginPath();ctx.moveTo(gx,mapY);ctx.lineTo(gx,mapY+mapH);ctx.stroke();}
+  for(let gy=mapY;gy<mapY+mapH;gy+=12){ctx.beginPath();ctx.moveTo(x+6,gy);ctx.lineTo(x+w-6,gy);ctx.stroke();}
+  // mini rider
+  const prog2=((t*0.5)%1);
+  const mrx=x+8+prog2*(w-16);const mry=mapY+mapH*0.5+Math.sin(prog2*Math.PI*2)*mapH*0.15;
+  ctx.fillStyle=accent;ctx.beginPath();ctx.arc(mrx,mry,4,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=accent+'88';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
+  ctx.beginPath();ctx.moveTo(x+8,mapY+mapH*0.7);ctx.lineTo(mrx,mry);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(x+w-14,mapY+mapH*0.3,4,0,Math.PI*2);ctx.fill();
+
+  // Pay button
+  const btnY=y+h-50;
+  ctx.fillStyle=accent;ctx.beginPath();ctx.roundRect(x+10,btnY,w-20,36,10);ctx.fill();
+  ctx.fillStyle='#000';ctx.font='bold 12px -apple-system,sans-serif';ctx.textAlign='center';
+  ctx.fillText('Pay ₹2,500 via Cashfree',x+w/2,btnY+23);
+}
+
+function drawAppMarketplace(ctx, x, y, w, h, t, accent) {
+  ctx.fillStyle='#f8fafc';ctx.fillRect(x,y,w,h);
+  // App bar
+  const abg=ctx.createLinearGradient(x,y,x,y+72);
+  abg.addColorStop(0,'#102D30');abg.addColorStop(1,'#1a3a3e');
+  ctx.fillStyle=abg;ctx.fillRect(x,y,w,72);
+  ctx.fillStyle='#f59e0b';ctx.font='bold 13px -apple-system,sans-serif';ctx.textAlign='left';
+  ctx.fillText('CC Circle',x+8,y+26);
+  ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='7px -apple-system,sans-serif';
+  ctx.fillText('Creative Professionals · Bangalore',x+8,y+38);
+  ctx.textAlign='right';ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.fillText('🔔  ☀️',x+w-8,y+28);
+  // Location
+  ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.roundRect(x+6,y+44,w-12,22,6);ctx.fill();
+  ctx.fillStyle='#f59e0b';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='left';
+  ctx.fillText('📍  Indiranagar, Bengaluru',x+10,y+58);
+
+  // Search
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.roundRect(x+6,y+76,w-12,28,8);ctx.fill();
+  ctx.strokeStyle='#e2e8f0';ctx.lineWidth=0.5;ctx.beginPath();ctx.roundRect(x+6,y+76,w-12,28,8);ctx.stroke();
+  ctx.fillStyle='#94a3b8';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='left';
+  ctx.fillText('🔍  Search makeup, photos, reels...',x+12,y+93);
+
+  // Category grid
+  const cats=[['📸','Photographers','#dbeafe'],['💄','Makeup','#fce7f3'],['🎬','Video','#dcfce7'],['💇','Hair','#fef9c3'],['🎨','Design','#f3e8ff'],['🎵','Music','#ffedd5']];
+  const tw=(w-20)/3;const th=50;
+  cats.forEach(([em,lb,col],i)=>{
+    const col2=i%3,row2=Math.floor(i/3);
+    const cx2=x+6+col2*(tw+4),cy2=y+110+row2*(th+4);
+    ctx.fillStyle=col;ctx.beginPath();ctx.roundRect(cx2,cy2,tw,th,8);ctx.fill();
+    ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText(em,cx2+tw/2,cy2+26);
+    ctx.fillStyle='#1e293b';ctx.font='bold 7px -apple-system,sans-serif';ctx.fillText(lb,cx2+tw/2,cy2+42);
+  });
+
+  // Scrolling professional cards
+  const scroll=((t*18)%(130*3));
+  const pros=[
+    {name:'Priya M.',cat:'Wedding Photographer',rating:'⭐ 4.9',price:'₹3,000/hr',em:'📸',verified:true},
+    {name:'Rahul K.',cat:'Portrait & Reels',rating:'⭐ 4.8',price:'₹2,500/hr',em:'📸',verified:true},
+    {name:'Ananya S.',cat:'Bridal Makeup Artist',rating:'⭐ 5.0',price:'₹5,000/day',em:'💄',verified:false},
+    {name:'Dev R.',cat:'Cinematographer',rating:'⭐ 4.7',price:'₹4,000/hr',em:'🎬',verified:true},
+  ];
+  ctx.save();ctx.beginPath();ctx.rect(x,y+215,w,h-215);ctx.clip();
+  pros.forEach((pro,i)=>{
+    const cardY=y+218+i*96-scroll%96;
+    if(cardY+96<y+215||cardY>y+h)return;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.roundRect(x+6,cardY,w-12,88,10);ctx.fill();
+    ctx.strokeStyle='#f1f5f9';ctx.lineWidth=0.5;ctx.beginPath();ctx.roundRect(x+6,cardY,w-12,88,10);ctx.stroke();
+    ctx.fillStyle=accent+'22';ctx.beginPath();ctx.roundRect(x+12,cardY+8,52,52,8);ctx.fill();
+    ctx.font='22px sans-serif';ctx.textAlign='center';ctx.fillText(pro.em,x+38,cardY+40);
+    ctx.fillStyle='#0f172a';ctx.font='bold 10px -apple-system,sans-serif';ctx.textAlign='left';
+    ctx.fillText(pro.name+(pro.verified?' ✓':''),x+72,cardY+24);
+    ctx.fillStyle='#64748b';ctx.font='8px -apple-system,sans-serif';ctx.fillText(pro.cat,x+72,cardY+38);
+    ctx.fillStyle='#f59e0b';ctx.font='8px -apple-system,sans-serif';ctx.fillText(pro.rating,x+72,cardY+52);
+    ctx.fillStyle=accent;ctx.font='bold 9px -apple-system,sans-serif';ctx.fillText(pro.price,x+72,cardY+66);
+    ctx.fillStyle=accent;ctx.beginPath();ctx.roundRect(x+w-60,cardY+28,46,24,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold 8px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('Book',x+w-37,cardY+43);
+  });
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW FULL FRAME
+// ═══════════════════════════════════════════════════════
+function drawFrame(campaign, t) {
+  const accent = campaign.accent;
+  // Background
+  ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0,0,W,H);
+  // Subtle grid
+  ctx.strokeStyle='rgba(255,255,255,0.02)';ctx.lineWidth=1;
+  for(let gx=0;gx<W;gx+=60){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
+  for(let gy=0;gy<H;gy+=60){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+
+  // ── TOP HALF: MacBook + VS Code ──────────────────────
+  const laptopMargin = 28;
+  const laptopY = 155;
+  const laptopW = W - laptopMargin*2;
+  const laptopH = 540;
+  const { sx, sy, sw, sh } = drawMacBook(ctx, laptopMargin, laptopY, laptopW, laptopH);
+  const charReveal = Math.min(t / (DUR * 0.78), 1);
+  drawVSCode(ctx, sx, sy, sw, sh, campaign, charReveal);
+
+  // ── BOTTOM HALF: iOS Simulator ───────────────────────
+  const simY = laptopY + laptopH + 26;
+  const simH = H - simY - 270;
+  const simW = Math.min(W - laptopMargin*2, simH * 0.72);
+  const simX = W/2 - simW/2;
+  drawSimulatorWindow(ctx, simX, simY, simW, simH, campaign, t);
+
+  // ── DIVIDER LABEL ─────────────────────────────────────
+  ctx.fillStyle = accent + '22';
+  ctx.fillRect(0, laptopY - 2, W, 2);
+  ctx.fillStyle = accent + '22';
+  ctx.fillRect(0, simY - 14, W, 2);
+
+  // ── TOP HOOK ─────────────────────────────────────────
+  const hookAlpha = t < 0.8 ? t/0.8 : t > DUR-1 ? (DUR-t) : 1;
+  ctx.fillStyle = `rgba(0,0,0,${0.8*hookAlpha})`;
+  ctx.beginPath(); ctx.roundRect(24, 24, W-48, 116, 16); ctx.fill();
+  ctx.strokeStyle = accent + '66'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(24, 24, W-48, 116, 16); ctx.stroke();
+
+  // POV label
+  ctx.fillStyle = accent;
+  ctx.font = 'bold 18px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('POV:', 44, 60);
+  ctx.fillStyle = `rgba(255,255,255,${hookAlpha})`;
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+
+  // Word-wrap hook
+  const words = campaign.hook.split(' ');
+  let line1='', line2='';
+  words.forEach(w => {
+    if (ctx.measureText(line1 + w + ' ').width < W - 120) line1 += w + ' ';
+    else line2 += w + ' ';
+  });
+  ctx.fillText(line1.trim(), 44, 88);
+  if (line2) { ctx.font = 'bold 20px -apple-system, sans-serif'; ctx.fillText(line2.trim(), 44, 116); }
+
+  // ── BOTTOM CAPTION ───────────────────────────────────
+  ctx.fillStyle = 'rgba(0,0,0,0.88)';
+  ctx.beginPath(); ctx.roundRect(24, H-258, W-48, 232, 18); ctx.fill();
+  ctx.strokeStyle = accent + '44'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(24, H-258, W-48, 232, 18); ctx.stroke();
+
+  // Progress bar
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath(); ctx.roundRect(44, H-246, W-88, 5, 3); ctx.fill();
+  ctx.fillStyle = accent;
+  ctx.beginPath(); ctx.roundRect(44, H-246, (W-88)*(t/DUR), 5, 3); ctx.fill();
+
+  // Tech tag
+  ctx.fillStyle = accent + 'cc';
+  ctx.beginPath(); ctx.roundRect(44, H-234, 250, 24, 12); ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 11px -apple-system, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('⚡ ' + campaign.tag, 56, H-218);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px -apple-system, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('CC Circle — Creative Pro Marketplace', W/2, H-184);
+  ctx.fillStyle = accent;
+  ctx.font = '15px -apple-system, sans-serif';
+  ctx.fillText("Bangalore's #1 platform for creative bookings", W/2, H-162);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.font = '14px -apple-system, sans-serif';
+  ctx.fillText('📱 Book photographers, makeup artists, videographers & more', W/2, H-138);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px -apple-system, sans-serif';
+  ctx.fillText('🔗 Follow for launch updates  •  💬 DM us to join beta', W/2, H-112);
+  ctx.fillStyle = accent;
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.fillText('#CCCircle #Bangalore #ReactNative #StartupIndia #CreativePro', W/2, H-88);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '11px monospace';
+  ctx.fillText('Built with React Native · Expo · Mapbox · Supabase · Cashfree', W/2, H-64);
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════════════
+let startTime = null;
+let currentCampaign = 0;
+
+function renderFrame(ts) {
+  if (!startTime) startTime = ts;
+  const elapsed = (ts - startTime) / 1000;
+  const t = elapsed % DUR;
+  const campaign = campaigns[currentCampaign];
+  ctx.clearRect(0,0,W,H);
+  drawFrame(campaign, t);
+  ST.textContent = `Campaign ${currentCampaign+1}/3: ${campaign.id}  |  ${t.toFixed(1)}s / ${DUR}s`;
+  requestAnimationFrame(renderFrame);
+}
+requestAnimationFrame(renderFrame);
+
+// ═══════════════════════════════════════════════════════
+//  RECORDING API (called by Node.js generator)
+// ═══════════════════════════════════════════════════════
+window.startRecording = function(campaignIndex, durationMs) {
+  return new Promise((resolve, reject) => {
+    currentCampaign = campaignIndex;
+    startTime = null;
+    const stream = C.captureStream(FPS);
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9' : 'video/webm';
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 10_000_000 });
+    const chunks = [];
+    rec.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunks, { type: mime });
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    };
+    rec.onerror = reject;
+    rec.start(200);
+    setTimeout(() => rec.stop(), durationMs);
+  });
+};
+</script>
+</body>
+</html>

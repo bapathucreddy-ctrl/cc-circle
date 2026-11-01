@@ -13,6 +13,9 @@ Deno.serve(async req => {
   const admin = adminClient();
   const reminders = await admin.rpc('queue_booking_reminders');
   if (reminders.error) return json({ error: 'Unable to queue reminders' }, 500);
+  const promotions = await admin.rpc('queue_daily_promotions');
+  // Marketing failures must not interrupt booking/payment notification delivery.
+  if (promotions.error) console.warn('Promotion scheduling unavailable');
   const raw = Deno.env.get('FCM_SERVICE_ACCOUNT_JSON');
   const appleKeyId = Deno.env.get('APNS_KEY_ID'), appleTeamId = Deno.env.get('APNS_TEAM_ID'), appleKey = Deno.env.get('APNS_PRIVATE_KEY');
   const providers = [...(raw ? ['fcm'] : []), ...(appleKeyId && appleTeamId && appleKey ? ['apns'] : [])];
@@ -21,7 +24,7 @@ Deno.serve(async req => {
     const { data, error } = await admin.rpc('claim_notification_deliveries_for_providers', { p_providers: providers });
     if (error) throw new Error('Unable to claim notifications');
     let sent = 0; let retried = 0;
-    const jobs = data as { id: string; attempt: number; token: string; notification_id: string; title: string; variant: string; provider: string; environment: ApnsEnvironment }[];
+    const jobs = data as { id: string; attempt: number; token: string; notification_id: string; title: string; variant: string; provider: string; environment: ApnsEnvironment; promotion_body?: string | null }[];
     // Five at a time keeps FCM/Edge limits bounded. Retry leases survive termination.
     for (let at = 0; at < jobs.length; at += 5) {
       await Promise.all(jobs.slice(at, at + 5).map(async job => {
@@ -34,13 +37,13 @@ Deno.serve(async req => {
           else {
             if (job.provider === 'apns' && appleKeyId && appleTeamId && appleKey) {
               const authorization = await apnsAuthorization(apnsAccount(appleKeyId, appleTeamId, appleKey));
-              const request = apnsRequest(job.token, job.environment, job.variant, job.notification_id, job.title, authorization);
+              const request = apnsRequest(job.token, job.environment, job.variant, job.notification_id, job.title, authorization, job.promotion_body || undefined);
               const response = await fetch(request.url, request.options);
               const body = response.status === 200 ? {} : await response.json();
               result = apnsResult(response.status, body.reason);
             } else if (job.provider === 'fcm' && raw) {
               const account = firebaseAccount(raw); const token = await firebaseAccessToken(account);
-              const response = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(firebaseMessage(job.token, job.notification_id, job.title)), signal: AbortSignal.timeout(10000) });
+              const response = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(firebaseMessage(job.token, job.notification_id, job.title, job.promotion_body || undefined)), signal: AbortSignal.timeout(10000) });
               const body = await response.json(); result = firebaseResult(response.status, body);
             }
           }

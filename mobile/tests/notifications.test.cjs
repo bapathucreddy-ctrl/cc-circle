@@ -17,7 +17,7 @@ test('APNs signs ES256 JWTs, routes the correct app/environment and preserves to
  const account=api.apnsAccount('ABCD123456','TEAM123456',keys.privateKey.export({type:'pkcs8',format:'pem'}));
  const jwt=await api.apnsAuthorization(account),[header,payload,signature]=jwt.split('.');
  assert.equal(JSON.parse(Buffer.from(header,'base64url')).alg,'ES256');assert.equal(JSON.parse(Buffer.from(payload,'base64url')).iss,'TEAM123456');assert.equal(crypto.verify('sha256',Buffer.from(header+'.'+payload),{key:keys.publicKey,dsaEncoding:'ieee-p1363'},Buffer.from(signature,'base64url')),true);assert.equal(await api.apnsAuthorization(account),jwt);
- for(const variant of ['customer','professional'])for(const environment of ['sandbox','production']){const req=api.apnsRequest('a'.repeat(64),environment,variant,'opaque-id','Booking accepted',jwt);assert.ok(req.url.startsWith(environment==='sandbox'?'https://api.sandbox.push.apple.com/':'https://api.push.apple.com/'));assert.equal(req.options.headers['apns-topic'],'com.cccircle.'+variant);const body=JSON.parse(req.options.body);assert.equal(body.notification_id,'opaque-id');assert.equal(body.aps.alert.body,'Open Circle for the latest update.');assert.equal(req.options.headers['apns-push-type'],'alert');}
+ for(const variant of ['customer','professional'])for(const environment of ['sandbox','production']){const req=api.apnsRequest('a'.repeat(64),environment,variant,'opaque-id','Booking accepted',jwt);assert.ok(req.url.startsWith(environment==='sandbox'?'https://api.sandbox.push.apple.com/':'https://api.push.apple.com/'));assert.equal(req.options.headers['apns-topic'],'com.cccircle.'+variant);const body=JSON.parse(req.options.body);assert.equal(body.notification_id,'opaque-id');assert.equal(body.aps.alert.body,'Open Artist House for the latest update.');assert.equal(req.options.headers['apns-push-type'],'alert');}
  assert.throws(()=>api.apnsRequest('bad','production','customer','id','title',jwt),/Invalid APNs/);assert.throws(()=>api.apnsRequest('a'.repeat(64),'evil','customer','id','title',jwt),/Invalid APNs/);
  assert.equal(api.apnsResult(200),'sent');assert.equal(api.apnsResult(410,'Unregistered'),'invalid');assert.equal(api.apnsResult(400,'BadDeviceToken'),'failed');assert.equal(api.apnsResult(403,'ExpiredProviderToken'),'retry');assert.equal(api.apnsResult(429),'retry');assert.equal(api.apnsResult(503),'retry');
 });
@@ -27,7 +27,7 @@ test('notification taps reject malformed IDs and verify recipient plus app varia
 test('FCM payload exposes only a generic update and an opaque notification ID; retries retain valid tokens',()=>{
  const api=load('../../supabase/functions/_shared/firebase.ts',{});
  const message=api.firebaseMessage('token','notification-id','Booking accepted');
- assert.equal(message.message.notification.body,'Open Circle for the latest update.');
+ assert.equal(message.message.notification.body,'Open Artist House for the latest update.');
  assert.equal(message.message.data.notification_id,'notification-id');
  assert.equal(message.message.android.notification.visibility,'PRIVATE');
  assert.equal(api.firebaseResult(200,{}),'sent');assert.equal(api.firebaseResult(503,{}),'retry');assert.equal(api.firebaseResult(429,{}),'retry');
@@ -53,12 +53,11 @@ test('Firebase authorization signs a valid short-lived JWT and caches only its a
  assert.throws(()=>api.firebaseAccount(JSON.stringify({project_id:'https://untrusted.example',client_email:email,private_key:'fake'})),/Invalid Firebase/);
 });
 
-function splash(ready){const effects=[],timers=[],starts=[],jsx=(type,props)=>({type,props});let finished=0;class Value{constructor(v){this.v=v}addListener(){return 'listener'}removeListener(){}setValue(v){this.v=v}interpolate(){return 0}}
- const chain={start:cb=>{starts.push(cb)},stop(){}};
- const mod=load('../src/components/LaunchSplash.tsx',{'react':{useEffect:fn=>effects.push(fn),useRef:v=>({current:v}),useState:v=>[v,()=>{}]},'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{AccessibilityInfo:{isReduceMotionEnabled:async()=>false},Animated:{Value,View:'AnimatedView',sequence:()=>chain,timing:()=>({}),delay:()=>({})},Easing:{linear:()=>{},out:x=>x,cubic:()=>{}},Image:'Image',Platform:{OS:'android'},Text:'Text',View:'View'},'../ui':{BrandMark:'BrandMark',brandCopy:{name:'Circle',tagline:'CREATIVITY, CONNECTED.',footer:'YOUR PEOPLE. YOUR CIRCLE.'},useTheme:()=>({colors:{bg:'#f0f0f0',text:'#000',muted:'#666'},theme:'minimal'})},'../../assets/brand/splash-trace-minimal.png':1,'../../assets/brand/splash-trace-gallery.png':2},{setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length},clearTimeout:()=>{}});
- const tree=mod.LaunchSplash({ready,onFinish:()=>finished++});const cleanup=effects[0]();return {tree,timers,starts,cleanup,finished:()=>finished};}
-test('original animated splash waits for the first layout, without consuming its animation behind native launch',async()=>{const a=splash(false);await Promise.resolve();assert.equal(a.timers.length,0);assert.equal(a.starts.length,0);assert.equal(a.tree.props.accessibilityLabel,'Circle is opening');const b=splash(true);await Promise.resolve();await Promise.resolve();assert.equal(b.starts.length,1);b.starts[0]({finished:true});assert.equal(b.finished(),1);b.cleanup();});
-test('an interrupted splash releases startup by deadline but never calls back after unmount',()=>{const a=splash(true);a.timers[0].fn();assert.equal(a.finished(),1);a.cleanup();a.timers[0].fn();assert.equal(a.finished(),1)});
+function splash(ready){const effects=[],timers=[],jsx=(type,props)=>({type,props});let finished=0;
+ const mod=load('../src/components/LaunchSplash.tsx',{'react':{useEffect:fn=>effects.push(fn),useCallback:fn=>fn,useRef:v=>({current:v})},'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{View:'View'},'react-native-webview':{WebView:'WebView'},'./launchSplashHtml':{launchSplashHtml:'offline-splash'}},{setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length},clearTimeout:()=>{}});
+ const tree=mod.LaunchSplash({ready,onFinish:()=>finished++});const cleanup=effects[0]();return {tree,timers,cleanup,finished:()=>finished};}
+test('HTML splash starts only after layout and completes once on its bridge event',()=>{const a=splash(false);assert.equal(a.timers.length,0);assert.equal(a.tree.props.children,false);const b=splash(true);const web=b.tree.props.children;assert.equal(web.props.source.html,'offline-splash');web.props.onMessage({nativeEvent:{data:'unrelated'}});assert.equal(b.finished(),0);web.props.onMessage({nativeEvent:{data:'artist-house-splash-complete'}});b.timers[0].fn();assert.equal(b.finished(),1);b.cleanup();});
+test('splash deadline releases startup and unmount ignores late events',()=>{const a=splash(true);a.timers[0].fn();assert.equal(a.finished(),1);const b=splash(true);b.cleanup();b.timers[0].fn();assert.equal(b.finished(),0);});
 
 test('the clean bell never loads history and late settings refresh preserves push errors',async()=>{
  const states=[],refs=[],effects=[],pending=[];let si=0,ri=0,tree,historyCalls=0;

@@ -3,13 +3,13 @@ import { appVariant } from './appVariant';
 
 export default function ExpoGoScreen() {
   return <ScrollView contentContainerStyle={styles.page}>
-    <Image accessibilityLabel="Circle logo" source={require('../assets/brand/mark-white.png')} style={{ width: 72, height: 72 }} resizeMode="contain" />
-    <Text style={styles.title}>Open the Circle development app.</Text>
+    <Image accessibilityLabel="Artist House logo" source={require('../assets/brand/mark-white.png')} style={{ width: 72, height: 72 }} resizeMode="contain" />
+    <Text style={styles.title}>Open the Artist House development app.</Text>
     <Text style={styles.text}>This project uses native Mapbox maps and Cashfree payments. Expo Go does not include those modules. Install its development build to use the full app.</Text>
     <Text style={styles.text}>1. Build and install the {appVariant} development app on your phone.</Text>
     <Text style={styles.text}>2. From the mobile folder on your computer, run:</Text>
     <Text selectable style={styles.command}>{`.\\run-device.cmd ${appVariant}`}</Text>
-    <Text style={styles.text}>3. Open the installed Circle app and connect to that development server. Keep the phone and computer on the same Wi-Fi.</Text>
+    <Text style={styles.text}>3. Open the installed Artist House app and connect to that development server. Keep the phone and computer on the same Wi-Fi.</Text>
     <Text style={styles.text}>Build instructions are in docs/native-development.md in this project.</Text>
     <Pressable accessibilityRole="link" accessibilityLabel="Read Expo development build guide" onPress={() => { void Linking.openURL('https://docs.expo.dev/develop/development-builds/introduction/'); }} style={styles.button}><Text style={styles.buttonText}>Development build guide</Text></Pressable>
   </ScrollView>;

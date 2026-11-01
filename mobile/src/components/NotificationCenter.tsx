@@ -1,4 +1,5 @@
 import { AppFooter } from './AppFooter';
+import { isProfessionalApp } from '../appVariant';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, Modal, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +48,7 @@ export function NotificationCenter({ userId, children, onNavigate }: { userId: s
       if (!active) return;
       notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
       if (Platform.OS === 'android') await notifications.setNotificationChannelAsync('circle-activity', { name: 'Bookings and messages', importance: notifications.AndroidImportance.HIGH });
+      if (Platform.OS === 'android' && !isProfessionalApp) await notifications.setNotificationChannelAsync('artist-house-promotions', { name: 'Artist House picks and inspiration', importance: notifications.AndroidImportance.DEFAULT, sound: null });
       if (!active) return;
       subscriptions.push(notifications.addNotificationResponseReceivedListener(response => { void openTarget(response.notification.request.content.data?.notification_id); }));
       const last = await notifications.getLastNotificationResponseAsync();
@@ -62,10 +64,10 @@ export function NotificationCenter({ userId, children, onNavigate }: { userId: s
   async function enableDevice() {
     setBusy(true); setError('');
     try {
-      if (!pushConfigured) throw new Error(Platform.OS === 'web' ? 'Phone notifications require the Android or iPhone app.' : 'Phone notifications are not available in this version yet. Try again after updating Circle.');
+      if (!pushConfigured) throw new Error(Platform.OS === 'web' ? 'Phone notifications require the Android or iPhone app.' : 'Phone notifications are not available in this version yet. Try again after updating Artist House.');
       const notifications = await import('expo-notifications');
       const permission = await notifications.requestPermissionsAsync();
-      if (!permission.granted) throw new Error('Allow notifications in your phone settings to receive booking updates when Circle is closed.');
+      if (!permission.granted) throw new Error('Allow notifications in your phone settings to receive booking updates when Artist House is closed.');
       const token = await notifications.getDevicePushTokenAsync();
       if (token.type !== Platform.OS) throw new Error('Unable to register this phone for notifications.');
       await saveNotificationToken(token.data, userId);
@@ -87,7 +89,7 @@ export function NotificationCenter({ userId, children, onNavigate }: { userId: s
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: 0 }]}>
           <Notice message={error || loadError} />
           <View style={styles.card}><Button title="Enable phone notifications" disabled={busy} onPress={() => { void enableDevice(); }} />{Boolean(deviceStatus) && <Text style={styles.muted}>{deviceStatus}</Text>}
-            {settings && (['push_enabled', 'messages_enabled', 'events_enabled'] as const).map(key => <View key={key} style={styles.between}><Text style={styles.text}>{({ push_enabled: 'Phone notifications', messages_enabled: 'Booking messages', events_enabled: 'Event opportunities & applications' })[key]}</Text><Switch accessibilityLabel={key} value={settings[key]} disabled={busy} onValueChange={value => { if (key === 'push_enabled' && value) void enableDevice(); else void changeSetting(key, value); }} trackColor={{ false: colors.line, true: colors.text }} thumbColor={colors.panel} /></View>)}
+            {settings && (['push_enabled', 'messages_enabled', 'events_enabled', 'promotions_enabled'] as const).filter(key=>key!=='promotions_enabled'||!isProfessionalApp).map(key => <View key={key} style={styles.between}><Text style={[styles.text,{flex:1,paddingRight:12}]}>{({ push_enabled: 'Phone notifications', messages_enabled: 'Booking messages', events_enabled: 'Event opportunities & applications',promotions_enabled:'Picks & inspiration (up to 3 daily)' })[key]}</Text><Switch accessibilityLabel={key} value={settings[key]} disabled={busy} onValueChange={value => { if (key === 'push_enabled' && value) void enableDevice(); else void changeSetting(key, value); }} trackColor={{ false: colors.line, true: colors.text }} thumbColor={colors.panel} /></View>)}
           </View>
         </ScrollView>
         <AppFooter />

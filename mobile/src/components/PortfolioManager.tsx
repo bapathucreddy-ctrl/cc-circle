@@ -10,10 +10,10 @@ import { supabase } from '../lib/supabase';
 import { useResource } from '../hooks';
 import { errorText } from '../domain';
 import { Button, Card, Notice, useTheme } from '../ui';
-import { VerifiedTickBadge } from './InstagramVerificationBadge';
 import { PortfolioGallery } from './PortfolioGallery';
+import { VerifiedTickBadge } from './InstagramVerificationBadge';
 
-export function PortfolioManager({ userId, onCountChange, gridFirst = false, afterGallery }: { userId: string; onCountChange?: (count: number) => void; gridFirst?: boolean; afterGallery?: ReactNode }) {
+export function PortfolioManager({ userId, onCountChange, gridFirst = false, afterGallery, connectionOnly = false }: { userId: string; onCountChange?: (count: number) => void; gridFirst?: boolean; afterGallery?: ReactNode; connectionOnly?: boolean }) {
   const { styles } = useTheme();
   const result = useResource(() => loadPortfolio(userId), userId, 'portfolio');
   const [busy, setBusy] = useState(false);
@@ -32,7 +32,7 @@ export function PortfolioManager({ userId, onCountChange, gridFirst = false, aft
         if (status?.status === 'complete' || status?.status === 'failed') {
           setPending(null); setBusy(false); popup.current?.close();
           if (status.status === 'failed') setError(status.message || 'Import failed. Reconnect your account.');
-          else { setMessage('Instagram verified.'); await refresh(true); }
+          else { setMessage('Instagram connected. Profile approval is reviewed by Artist House.'); await refresh(true); }
         }
       } catch (e) { if (active) setError(errorText(e)); } finally { checking = false; }
     }
@@ -85,10 +85,11 @@ export function PortfolioManager({ userId, onCountChange, gridFirst = false, aft
       return <Button key={provider} title={connected ? `Disconnect ${name}` : `Verify with ${name}`} secondary
         onPress={() => connected ? disconnect(provider) : connect(provider)} disabled={busy || result.loading || Boolean(result.error)} />;
     })}
-    {result.data?.connections.some(connection => connection.provider === 'instagram' && !connection.reconnect) && <View style={styles.row}><VerifiedTickBadge /><Text style={styles.muted}>Instagram connected</Text></View>}
-    <Text style={[styles.muted, { fontSize: 12 }]}>Up to 10 photos / under 5 MB each. No text or logos.</Text>
+    {result.data?.connections.some(connection => connection.provider === 'instagram' && !connection.reconnect) && <View style={styles.row}><VerifiedTickBadge kind="instagram" /><Text style={styles.muted}>Instagram connected</Text></View>}
+    {!connectionOnly && <Text style={[styles.muted, { fontSize: 12 }]}>Up to 10 photos / under 5 MB each. No text or logos.</Text>}
     {pending && <Text accessibilityLiveRegion="polite" style={styles.muted}>Connecting...</Text>}
   </Card>;
   const gallery = <PortfolioGallery professionalId={userId} editable onDelete={remove} onAdd={() => { void upload(); }} adding={busy} />;
+  if (connectionOnly) return <View style={{ gap: 12 }}>{controls}{feedback}</View>;
   return <View style={{ gap: 16 }}>{gridFirst ? <>{gallery}{feedback}{afterGallery}{controls}</> : <>{controls}{gallery}{feedback}{afterGallery}</>}</View>;
 }

@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -14,7 +15,7 @@ test('hair professionals, private portfolio imports and verified post-service re
   await db.query('insert into auth.users(id) values($1),($2),($3)',[pro,customer,stranger]);
   async function as(id,run){await db.exec('set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);try{return await run();}finally{await db.exec('reset role');}}
   const profile={display_name:'Studio Scissor',category:'HairStylist',city:'Bengaluru',bio:'Professional styling for bridal, editorial and everyday occasions.',specialties:['Bridal hair'],longitude:77.64,latitude:12.978,portfolio_urls:[],public_specs:{}};
-  const save=p=>as(pro,()=>db.query('select public.save_professional_profile($1,$2,$3)',[p,{}, {name:'Hair session',amount_paise:500000,duration_minutes:60}]));
+  const save=p=>as(pro,()=>saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)',[p,{}, {name:'Hair session',amount_paise:500000,duration_minutes:60}]));
   await assert.rejects(()=>save({...profile,display_name:'@my_private_id'}),/Import or upload/);
   await assert.rejects(()=>save(profile),/Import or upload/);
   const photos=Array.from({length:15},(_,i)=>({kind:'image',media_url:`https://cdn.example.com/${i}.jpg`,source_id:`private-source-${i}`}));
@@ -30,7 +31,7 @@ test('hair professionals, private portfolio imports and verified post-service re
   assert.equal(firstClaim.rows.length,1);assert.equal(replay.rows.length,0,'OAuth state cannot be claimed twice');
   await as(stranger,async()=>{
    const rows=(await db.query("select * from public.discover_professionals('HairStylist',77.64,12.978,'',15,false)")).rows;
-   assert.match(rows[0].display_name,/^[a-z]+[0-9]{6}$/);
+   assert.match(rows[0].display_name,/^[A-Z][a-z]+$/);
    for(const table of ['portfolio_media','portfolio_connections','portfolio_imports'])await assert.rejects(()=>db.query(`select * from public.${table}`),/permission denied/);
    await assert.rejects(()=>db.query("select public.replace_portfolio_media($1,'instagram',$2)",[pro,photos]),/permission denied/);
    await assert.rejects(()=>db.query('select private.save_professional_profile($1,$2,$3)',[profile,{},{}]),/permission denied/);

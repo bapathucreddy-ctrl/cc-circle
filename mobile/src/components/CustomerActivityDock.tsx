@@ -6,7 +6,7 @@ import { drivingRoute } from '../lib/routes';
 import { useForegroundRefresh, useResource } from '../hooks';
 import type { Booking } from '../domain';
 import { Icon, useTheme } from '../ui';
-import { genericRiderImage, riderImages } from './mapArtwork';
+import { bookingActivityImage } from './mapArtwork';
 import { customerActivity } from '../lib/customerActivity';
 
 export function CustomerActivityDock({ userId, currentBookingId, refreshVersion, reviewedBookingIds, onOpen, hideReviewReminder = false }: { userId: string; currentBookingId?: string; refreshVersion: number; reviewedBookingIds: string[]; onOpen: (booking: Booking) => void; hideReviewReminder?: boolean }) {
@@ -45,7 +45,7 @@ function ActivityCard({ booking, onOpen }: { booking: Booking; onOpen: (booking:
   const name = result.data?.person?.professional_name || booking.service_name;
   const caption = booking.billing_mode==='hourly'&&booking.status==='completed'&&!booking.paid_at?'Service complete - Pay final invoice':booking.billing_mode==='hourly'&&booking.status==='accepted'?'Hourly rate agreed - Awaiting your professional':booking.status === 'completed' ? 'Service complete · Rate your experience' : booking.status === 'arrived' ? booking.completion_requested_at ? 'Service finished ? Share your end OTP' : booking.service_started_at ? 'Service in progress' : 'Arrived ? Share your start OTP' : booking.status === 'en_route' ? estimate || 'On the way · Waiting for a fresh location' : booking.status === 'accepted' ? booking.paid_at ? 'Accepted · Waiting for your professional' : 'Accepted · Pay before your service' : 'Waiting for acceptance';
   return <Pressable testID="customer-tracking-dock" accessibilityRole="button" accessibilityLabel={booking.status==='completed'&&booking.billing_mode==='hourly'&&!booking.paid_at?'Pay final invoice':booking.status === 'completed' ? 'Rate completed service' : 'Open current booking'} onPress={() => onOpen(booking)} style={{ marginHorizontal: 14, marginBottom: 8, padding: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.panel, flexDirection: 'row', alignItems: 'center', gap: 12, maxWidth: 1052, alignSelf: 'center', width: '94%' }}>
-    <Image accessible={false} source={result.data?.person?.category ? riderImages[result.data.person.category] : genericRiderImage} style={{ width: 50, height: 50 }} />
+    <Image accessible={false} source={bookingActivityImage(result.data?.person?.category, booking.status)} style={{ width: 50, height: 50 }} />
     <View style={{ flex: 1, minWidth: 0, gap: 5 }}><Text numberOfLines={1} style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{name}</Text><Text numberOfLines={2} style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>{caption}</Text></View><Icon name="chevron" color={colors.accent} />
   </Pressable>;
 }

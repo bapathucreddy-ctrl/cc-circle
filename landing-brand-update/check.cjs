@@ -1,0 +1,17 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.join(__dirname,'dist'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+for(const match of html.matchAll(/(?:src|href)="(assets\/[^"#]+|[\w-]+\.(?:css|js))"/g))assert.ok(fs.existsSync(path.join(root,match[1])),match[1]);
+const ids=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));
+for(const match of html.matchAll(/href="#([^"#]+)"/g))assert.ok(ids.has(match[1]),match[1]);
+new vm.Script(js);
+new vm.Script(fs.readFileSync(path.join(root,'motion.js'),'utf8'));
+new vm.Script(fs.readFileSync(path.join(root,'film.js'),'utf8'));
+assert.ok(fs.existsSync(path.join(root,'assets/film-poster.jpg')));
+const serviceSource=js.slice(js.indexOf('const services ='),js.indexOf('let activeFilter='));
+const services=vm.runInNewContext(serviceSource+';services');
+assert.equal(services.length,12);
+for(const s of services)assert.ok(fs.existsSync(path.join(root,'assets',s.id+'.webp')));
+const result=vm.runInNewContext(serviceSource+`;services.filter(s=>s.group==='makeup').length`);assert.equal(result,3);
+assert.equal(vm.runInNewContext(serviceSource+`;services.filter(s=>s.occasion.includes('wedding')).length`),4);
+assert.equal(vm.runInNewContext(serviceSource+`;services.filter(s=>(s.name+' '+s.label+' '+s.group+' '+s.description).toLowerCase().includes('reel')).length`),2);
+console.log('PASS: JavaScript syntax, local assets, anchor targets, 12 service assets, category and occasion filtering.');

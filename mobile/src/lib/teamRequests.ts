@@ -4,8 +4,8 @@ import { supabase } from './supabase';
 export type TeamRole = { category: Category; quantity: number; selected?: number };
 export type TeamEvent = { id: string; title: string; requirements: string; starts_at: string; venue: string; is_owner: boolean; roles: TeamRole[];
   billing_mode?: 'fixed'|'hourly'; planned_hours?: number;
-  my_application: { id: string; service_name: string; net_paise: number; booking_id: string | null; booking_status: BookingStatus | null } | null };
-export type TeamApplicant = { id: string; professional_id: string; professional_name: string; category: Category; bio: string; city: string;
+  declined?: boolean; my_application: { review_status?: 'pending'|'approved'|'rejected'; id: string; service_name: string; net_paise: number; booking_id: string | null; booking_status: BookingStatus | null } | null };
+export type TeamApplicant = { review_status?: 'pending'|'approved'|'rejected'; id: string; professional_id: string; professional_name: string; category: Category; bio: string; city: string;
   service_name: string; duration_minutes: number; total_paise: number; message: string; booking_id: string | null; booking_status: BookingStatus | null };
 export async function teamEvents() {
   const { data, error } = await supabase.rpc('team_requests');
@@ -45,3 +45,5 @@ export async function teamBooking(id: string) {
   if (error) throw error;
   return data as Booking;
 }
+
+export async function rejectTeamEvent(id:string){const {error}=await supabase.rpc('reject_team_request',{p_event_id:id});if(error)throw error;}

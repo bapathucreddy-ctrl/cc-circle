@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -24,7 +25,7 @@ test('one-time registration separates private account identity from professional
   }
   const migrated=(await db.query('select p.full_name,p.contact_email,p.professional_display_name,t.display_name from public.profiles p join public.professionals t on t.id=p.id where p.id=$1',[legacy])).rows[0];
   assert.equal(migrated.full_name,'Legacy Private Name');assert.equal(migrated.contact_email,'legacy@example.com');
-  assert.match(migrated.display_name,/^[a-z]+[0-9]{6}$/);assert.equal(migrated.display_name,migrated.professional_display_name);
+  assert.match(migrated.display_name,/^[A-Z][a-z]+$/);assert.equal(migrated.display_name,migrated.professional_display_name);
   const [customer,professional,google]=Array.from({length:3},()=>crypto.randomUUID());
   await db.query("insert into auth.users(id,phone,phone_confirmed_at) values($1,'919000000001',now()),($2,'919000000002',now())",[customer,professional]);
   await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'google@example.com','{\"full_name\":\"Google Private Name\"}')",[google]);
@@ -45,11 +46,11 @@ test('one-time registration separates private account identity from professional
   await db.query('update auth.users set phone_confirmed_at=now() where id=$1',[google]);
   const completedGoogle=await finish(google,'Google Private Name','changed@example.com');
   assert.equal(completedGoogle.email,'google@example.com','Google email comes from server-side Auth, not a submitted substitute');
-  const p=await finish(professional,'Mira Rao','mira@example.com',null,true);assert.match(p.professional_name,/^[a-z]+[0-9]{6}$/);
+  const p=await finish(professional,'Mira Rao','mira@example.com',null,true);assert.match(p.professional_name,/^[A-Z][a-z]+$/);
   const alias=p.professional_name;
-  for(const requested of ['Mira Rao','Mira Rao Studio','Northern Light'])assert.equal((await finish(professional,'Mira Rao','mira@example.com',requested,true)).professional_name,alias,'Submitted names cannot replace the assigned alias');
+  for(const requested of ['Mira Rao','Mira Rao Studio','Northern Light'])assert.equal((await finish(professional,'Mira Rao','mira@example.com',requested,true)).professional_name,alias,'Submitted names cannot replace the registered first name');
   const profile={display_name:'Northern Light',category:'Photographer',city:'Bengaluru',bio:'Experienced wedding and portrait photographer for creative projects.',specialties:['Weddings'],longitude:77.64,latitude:12.97,portfolio_urls:['https://example.com/work'],public_specs:{}};
-  const save=name=>as(professional,()=>db.query('select public.save_professional_profile($1,$2,$3)',[{...profile,display_name:name},{},{name:'Portrait service',amount_paise:500000,duration_minutes:60}]));
+  const save=name=>as(professional,()=>saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)',[{...profile,display_name:name},{},{name:'Portrait service',amount_paise:500000,duration_minutes:60}]));
   await save('Mira Rao');
   await save('Northern Light');
   await as(customer,async()=>{
@@ -57,7 +58,7 @@ test('one-time registration separates private account identity from professional
     assert.equal(publicProfile.display_name,alias);assert.ok(!JSON.stringify(publicProfile).includes('Mira Rao'));assert.ok(!JSON.stringify(publicProfile).includes('mira@example.com'));
     assert.equal((await db.query('select * from public.profiles where id=$1',[professional])).rows.length,0,'Private name/email are owner-only');
   });
-  await save('Mira');assert.equal((await state(professional)).professional_name,alias,'Profile edits keep the generated username');
+  await save('Mira');assert.equal((await state(professional)).professional_name,alias,'Profile edits keep the registered first name');
   await as(professional,()=>assert.rejects(()=>db.query('select * from private.professional_usernames'),/permission denied/));
   await db.query("update public.professionals set display_name='919000000002' where id=$1",[professional]);
   assert.equal((await db.query('select display_name from public.professionals where id=$1',[professional])).rows[0].display_name,alias);

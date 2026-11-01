@@ -16,8 +16,11 @@ serveRequest(async req => {
     if (error || !professional) throw new HttpError(404, 'Create your professional profile first.');
     const { data: existing, error: lookupError } = await admin.from('payout_accounts').select('beneficiary_id').eq('professional_id', user.id).maybeSingle();
     if (lookupError) throw new HttpError(500, 'Unable to load payout account.');
-    if (existing) throw new HttpError(409, 'A payout account is already registered. Contact support to change it.');
-    const id = `cc_${user.id}`;
+    // An account-specific ID makes retries idempotent without mutating a beneficiary
+    // already used by an in-flight transfer. Do not retain raw account details.
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${user.id}:${environment()}:${number}:${ifsc}`)));
+    const suffix = Array.from(digest, value => value.toString(16).padStart(2, '0')).join('').slice(0, 12);
+    const id = `ah_${user.id.replaceAll('-', '')}_${suffix}`;
     let beneficiary;
     try {
       beneficiary = await payouts('/beneficiary', 'POST', { beneficiary_id: id, beneficiary_name: name,
@@ -28,8 +31,9 @@ serveRequest(async req => {
       if (beneficiary.beneficiary_instrument_details?.bank_account_number !== number || beneficiary.beneficiary_instrument_details?.bank_ifsc !== ifsc) throw new HttpError(409, 'Payout account details require support review.');
     }
     if (beneficiary.beneficiary_id !== id || ['INVALID','FAILED','DELETED','CANCELLED'].includes(beneficiary.beneficiary_status)) throw new HttpError(400, 'The payout provider could not verify this account.');
-    const { error: saveError } = await admin.from('payout_accounts').insert({ professional_id: user.id, beneficiary_id: id, environment: environment() });
-    if (saveError && saveError.code !== '23505') throw new HttpError(500, 'Unable to save payout account.');
+    const { error: saveError } = await admin.rpc('save_payout_beneficiary', { p_professional_id: user.id,
+      p_expected_id: existing?.beneficiary_id || null, p_beneficiary_id: id, p_environment: environment(), p_last4: number.slice(-4), p_ifsc: ifsc });
+    if (saveError) throw new HttpError(409, 'Unable to save bank account. Refresh your payout details and try again.');
     // Bank details are sent to Cashfree and are not stored in the application's tables.
     return json({ registered: true });
   } catch (error) { return handleError(error); }

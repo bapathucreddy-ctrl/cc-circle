@@ -1,8 +1,9 @@
 // Generated from prototype-demo.js. Regenerate with node scripts/import-prototype.cjs.
+import { photoSoftware, videoSoftware } from './lib/professionalIdentity';
 import type { Category } from './domain';
 import { hairQuestionnaire } from './hairQuestionnaire';
 import { contentCreatorQuestionnaire } from './contentCreatorQuestionnaire';
-export type Question = { id: string; label: string; type: 'select' | 'multi' | 'text' | 'number' | 'textarea'; required?: boolean; privateField?: boolean; hint?: string; options?: string[]; min?: number; max?: number };
+export type Question = { id: string; label: string; type: 'select' | 'multi' | 'text' | 'number' | 'textarea'; required?: boolean; when?: string; privateField?: boolean; hint?: string; options?: string[]; min?: number; max?: number };
 export type QuestionSection = { title: string; description: string; fields: Question[] };
 export const questionnaires: Record<Category, QuestionSection[]> = {
   HairStylist: hairQuestionnaire,
@@ -1928,3 +1929,22 @@ export const questionnaires: Record<Category, QuestionSection[]> = {
     }
   ]
 };
+
+// Required profile completion details, also validated by save_professional_profile.
+const photoKit = questionnaires.Photographer.find(section => section.fields.some(field=>field.id==='lenses'))!;
+for(const field of photoKit.fields) if(['lenses','lighting','kit-included'].includes(field.id))field.required=true;
+photoKit.fields.push(
+ {id:'lighting-kit',label:'Lighting kit models and quantities',type:'text',required:true},
+ {id:'backup-camera',label:'Backup camera models',type:'text',required:true},
+ {id:'backup-memory',label:'Backup memory cards (type, capacity and quantity)',type:'text',required:true},
+ {id:'equipment-pricing',label:'Equipment pricing (included items and any extra charges)',type:'textarea',required:true});
+const photoTools: Question={id:'photo-software',label:'Photo editing software',type:'multi',options:photoSoftware,required:true};
+const videoTools: Question={id:'video-software',label:'Video editing software',type:'multi',options:videoSoftware,required:true};
+questionnaires.Photographer.push({title:'Editing software',description:'Select the tools you use.',fields:[photoTools]});
+questionnaires.Editor.unshift({title:'Editing services',description:'Choose the services you provide.',fields:[{id:'editing-services',label:'Editing services',type:'multi',options:['Photo Editing','Video Editing'],required:true}]});
+questionnaires.Editor.push({title:'Required editing software',description:'Select at least one tool for each editing service.',fields:[{...photoTools,when:'Photo Editing'},{...videoTools,when:'Video Editing'}]});
+questionnaires.ContentCreator.push({title:'Video editing software',description:'Select at least one tool you use.',fields:[videoTools]});
+
+// Replace legacy free-form software questions with the required canonical choices.
+for(const section of questionnaires.Photographer)section.fields=section.fields.filter(field=>field.id!=='editing-software');
+for(const section of questionnaires.Editor)section.fields=section.fields.filter(field=>field.id!=='software');

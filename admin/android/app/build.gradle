@@ -3,7 +3,7 @@ android {
  namespace 'com.cccircle.admin'
  compileSdk 36
  buildToolsVersion '36.0.0'
- defaultConfig { applicationId 'com.cccircle.admin'; minSdk 24; targetSdk 36; versionCode 1; versionName '0.1.0' }
+ defaultConfig { applicationId 'com.cccircle.admin'; minSdk 24; targetSdk 36; versionCode 10; versionName '0.2.2' }
  signingConfigs {
   release {
    storeFile file(System.getenv('CCIRCLE_SIGNING_FILE') ?: 'missing-release-key')

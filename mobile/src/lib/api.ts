@@ -5,7 +5,7 @@ import { bookingFees, type Booking, type Category, type Coordinate, type Message
 export async function discover(category: Category, point: Coordinate, query: string, radius: number, now: boolean, serviceKey?: string) {
   const { data, error } = await supabase.rpc('discover_live_professionals', {
     p_category: category, p_longitude: point[0], p_latitude: point[1],
-    p_query: query.trim(), p_radius_km: radius, p_available_now: now,
+    p_query: query.trim(), p_radius_km: radius, p_available_now: false,
   });
   if (error) throw new Error(error.message);
   const people = data as Professional[];

@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -30,7 +31,7 @@ test('booking prices, access rules and payment transitions', async () => {
       await db.query("select set_config('request.jwt.claim.sub',$1,false)", [user]);
       try { return await run(); } finally { await db.exec('reset role'); }
     }
-    await as(talent, () => db.query('select public.save_professional_profile($1,$2,$3)', [
+    await as(talent, () => saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)', [
       { display_name:'Test Talent',category:'Actor',city:'Bengaluru',bio:'Experienced screen and stage performer for productions.',
         specialties:['Commercial'],longitude:77.6408,latitude:12.9784,portfolio_urls:['https://example.com/work'],public_specs:{height:'175'} },
       { fitting:'Private wardrobe details' }, { name:'Shoot day',amount_paise:500000,duration_minutes:120 },
@@ -69,14 +70,14 @@ test('booking prices, access rules and payment transitions', async () => {
       await assert.rejects(() => db.query("select public.confirm_payment('fake','fake',1)"),/permission denied/);
     });
     await as(talent, async () => {
-      const participants=(await db.query('select * from public.booking_participants($1)', [booking.id])).rows[0]; assert.equal(participants.client_name,'Test Customer'); assert.equal(participants.category,'Actor'); assert.match(participants.professional_name,/^[a-z]+[0-9]{6}$/);
+      const participants=(await db.query('select * from public.booking_participants($1)', [booking.id])).rows[0]; assert.equal(participants.client_name,'Test Customer'); assert.equal(participants.category,'Actor'); assert.match(participants.professional_name,/^[A-Z][a-z]+$/);
       assert.equal((await db.query('select * from public.profiles where id=$1', [client])).rows.length, 0, 'Participant RPC does not expose the private customer profile');
       await db.query("select public.transition_booking($1,'accepted')",[booking.id]);
       await assert.rejects(() => db.query("select public.transition_booking($1,'completed')",[booking.id]),/customer end OTP/);
       await assert.rejects(() => db.query("select public.transition_booking($1,'en_route')",[booking.id]),/Verified payment is required/);
     });
     await as(client, async () => {
-      assert.match((await db.query('select * from public.booking_participants($1)', [booking.id])).rows[0].professional_name, /^[a-z]+[0-9]{6}$/);
+      assert.match((await db.query('select * from public.booking_participants($1)', [booking.id])).rows[0].professional_name, /^[A-Z][a-z]+$/);
       await assert.rejects(() => db.query("select public.request_booking($1,$2,'Another venue',77.64,12.97,'',$3,559800)",[service,booking.starts_at,'20000000-0000-4000-8000-000000000002']),/already has a booking/);
       await assert.rejects(() => db.query('insert into public.messages(booking_id,sender_id,body) values($1,$2,$3)',[booking.id,client,'Too early']),/paid, active booking/);
     });
@@ -145,6 +146,15 @@ test('booking prices, access rules and payment transitions', async () => {
     assert.equal((await db.query('select count(*)::int as count from public.payout_jobs where booking_id=$1',[booking.id])).rows[0].count,1);
     const payout=(await db.query('select * from public.payout_jobs where booking_id=$1',[booking.id])).rows[0];
     assert.equal(payout.amount_paise,500000);
+    assert.ok(new Date(payout.available_at)-new Date(payout.created_at)>=86400000);
+    assert.equal(new Date(payout.next_attempt_at).getTime(),new Date(payout.available_at).getTime());
+    assert.equal((await db.query("select count(*)::int n from public.payout_jobs where available_at<=now() and booking_id=$1",[booking.id])).rows[0].n,0,'A new completed/paid booking cannot transfer immediately');
+    await assert.rejects(()=>as(talent,()=>db.query("select public.save_payout_beneficiary($1,null,'bank-a','sandbox','1234','HDFC0001234')",[talent])),/permission denied/);
+    await db.query("select public.save_payout_beneficiary($1,null,'bank-a','sandbox','1234','HDFC0001234')",[talent]);
+    await db.query("select public.save_payout_beneficiary($1,'bank-a','bank-b','sandbox','5678','HDFC0001234')",[talent]);
+    await assert.rejects(()=>db.query("select public.save_payout_beneficiary($1,'bank-a','bank-c','sandbox','9876','HDFC0001234')",[talent]),/Bank account changed/);
+    assert.equal((await db.query('select beneficiary_id from public.payout_accounts where professional_id=$1',[talent])).rows[0].beneficiary_id,'bank-b');
+    await as(stranger,async()=>assert.equal((await db.query('select * from public.payout_accounts')).rows.length,0));
     await as(stranger, async () => assert.equal((await db.query('select * from public.payout_jobs')).rows.length,0));
 
     // Lower bound and mid-range fees are enforced on the server, independently of the app preview.
