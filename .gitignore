@@ -37,3 +37,6 @@ Thumbs.db
 artifacts/previews/profile-services.html
 artifacts/previews/simplified-profiles.html
 artifacts/previews/social-profiles.html
+
+# Local Archify evidence snapshots and transient review receipts
+.archify/

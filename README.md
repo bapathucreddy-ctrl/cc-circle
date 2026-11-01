@@ -36,6 +36,8 @@ Actor and dancer categories are hidden from the current service selection. Team 
 
 ## Architecture
 
+Explore the [interactive Artist House architecture](docs/architecture/index.html), or [download all five Archify diagrams](docs/architecture/artist-house-architecture.zip) and open `index.html` locally. Covers the system, booking workflow, payments and payouts, external integrations, and repository/build structure. GitHub displays HTML as source; download it to use the interactive viewer.
+
 ```mermaid
 flowchart TB
     Customer[Customer app - Android / iOS / web]

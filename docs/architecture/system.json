@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Artist House — system architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-artist-house-20261101110217/system.html",
+    "repository": {
+      "url": "https://github.com/bapathucreddy-ctrl/cc-circle.git",
+      "revision": "f1e924b9f8eaec77598cf3e05b1c567c2f3dc2b3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "apps",
+      "type": "frontend",
+      "label": "Customer + Professional",
+      "sublabel": "Shared Expo / React Native",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/App.tsx",
+          "line": 166,
+          "end_line": 174
+        },
+        {
+          "path": "mobile/src/ProfessionalWorkspace.tsx",
+          "line": 24,
+          "end_line": 68
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Typed client services",
+      "sublabel": "SDK, RPCs, scoped cache",
+      "pos": [
+        370,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/lib/supabase.ts",
+          "line": 30,
+          "end_line": 39
+        },
+        {
+          "path": "mobile/src/lib/api.ts",
+          "line": 49,
+          "end_line": 65
+        },
+        {
+          "path": "mobile/src/hooks.ts",
+          "line": 21,
+          "end_line": 55
+        }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "Postgres + RPCs",
+      "sublabel": "Bookings, services, RLS",
+      "pos": [
+        700,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/202610080001_marketplace.sql",
+          "line": 150,
+          "end_line": 176
+        },
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 167,
+          "end_line": 191
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "type": "frontend",
+      "label": "Admin studio",
+      "sublabel": "Web UI + Android WebView",
+      "pos": [
+        1030,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "admin/src/app.js",
+          "line": 14,
+          "end_line": 34
+        },
+        {
+          "path": "admin/android/app/src/main/java/com/cccircle/admin/MainActivity.java",
+          "line": 47,
+          "end_line": 66
+        }
+      ]
+    },
+    {
+      "id": "maps",
+      "type": "cloud",
+      "label": "Mapbox",
+      "sublabel": "Map rendering + directions",
+      "pos": [
+        40,
+        240
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/lib/routes.ts",
+          "line": 3,
+          "end_line": 11
+        },
+        {
+          "path": "mobile/src/lib/liveLocation.ts",
+          "line": 8,
+          "end_line": 16
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Supabase Auth",
+      "sublabel": "Google PKCE + sessions",
+      "pos": [
+        370,
+        240
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/lib/googleAuth.ts",
+          "line": 16,
+          "end_line": 42
+        },
+        {
+          "path": "mobile/src/lib/supabase.ts",
+          "line": 33,
+          "end_line": 39
+        }
+      ]
+    },
+    {
+      "id": "edge",
+      "type": "backend",
+      "label": "Deno Edge Functions",
+      "sublabel": "Authenticated server APIs",
+      "pos": [
+        700,
+        240
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/_shared/payments.ts",
+          "line": 21,
+          "end_line": 38
+        },
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 9,
+          "end_line": 31
+        },
+        {
+          "path": "supabase/functions/cashfree-order/index.ts",
+          "line": 4,
+          "end_line": 24
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "database",
+      "label": "Supabase Storage",
+      "sublabel": "Signed private media",
+      "pos": [
+        1030,
+        240
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 63,
+          "end_line": 96
+        }
+      ]
+    },
+    {
+      "id": "landing",
+      "type": "frontend",
+      "label": "Marketing website",
+      "sublabel": "Static public landing page",
+      "pos": [
+        40,
+        440
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "landing-brand-update/dist/index.html",
+          "line": 1,
+          "end_line": 1
+        },
+        {
+          "path": "docs/circle-domain-setup.md",
+          "line": 1,
+          "end_line": 7
+        }
+      ]
+    },
+    {
+      "id": "hosting",
+      "type": "cloud",
+      "label": "Sites hosting",
+      "sublabel": "artisthouse.cclabs.space",
+      "pos": [
+        370,
+        440
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "landing-brand-update/.openai/hosting.json",
+          "line": 1,
+          "end_line": 1
+        },
+        {
+          "path": "docs/circle-domain-setup.md",
+          "line": 1,
+          "end_line": 7
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "apps-client",
+      "from": "apps",
+      "to": "client",
+      "label": "service calls",
+      "variant": "emphasis"
+    },
+    {
+      "id": "client-postgres",
+      "from": "client",
+      "to": "postgres",
+      "label": "RPC / queries",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admin-postgres",
+      "from": "admin",
+      "to": "postgres",
+      "label": "allowlisted RPCs",
+      "variant": "security"
+    },
+    {
+      "id": "apps-maps",
+      "from": "apps",
+      "to": "maps",
+      "label": "maps / routes",
+      "variant": "default"
+    },
+    {
+      "id": "client-auth",
+      "from": "client",
+      "to": "auth",
+      "label": "session / PKCE",
+      "variant": "security"
+    },
+    {
+      "id": "client-edge",
+      "from": "client",
+      "to": "edge",
+      "label": "HTTPS functions",
+      "variant": "default"
+    },
+    {
+      "id": "edge-storage",
+      "from": "edge",
+      "to": "storage",
+      "label": "signed media",
+      "variant": "default"
+    },
+    {
+      "id": "edge-postgres",
+      "from": "edge",
+      "to": "postgres",
+      "label": "service-role I/O",
+      "variant": "security"
+    },
+    {
+      "id": "landing-hosting",
+      "from": "landing",
+      "to": "hosting",
+      "label": "static delivery",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Trust boundaries",
+      "items": [
+        "Client bundles contain public configuration only; provider secrets stay in Edge Functions or encrypted Vault.",
+        "RLS and validated RPCs protect participant data, admin access and authoritative state changes."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Client data freshness",
+      "items": [
+        "Resource caches are scoped to the signed-in user; foreground polling revalidates state.",
+        "Realtime subscriptions complement polling for booking/chat/notification changes."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Reading this map",
+      "items": [
+        "Apps are grouped because Customer and Professional share one source tree but have distinct native identities.",
+        "Marketing hosting is independent of authenticated app operations. Source snapshot includes current local edits."
+      ]
+    }
+  ]
+}

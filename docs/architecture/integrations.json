@@ -1,0 +1,518 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Artist House — media, location and notification integrations",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-artist-house-20261101110217/integrations.html",
+    "repository": {
+      "url": "https://github.com/bapathucreddy-ctrl/cc-circle.git",
+      "revision": "f1e924b9f8eaec77598cf3e05b1c567c2f3dc2b3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "search",
+      "type": "frontend",
+      "label": "Map location search",
+      "sublabel": "Suggestions + adjustable pin",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/components/MapPlaceSearch.tsx",
+          "line": 1,
+          "end_line": 18
+        }
+      ]
+    },
+    {
+      "id": "placesEdge",
+      "type": "backend",
+      "label": "location-search",
+      "sublabel": "Auth + request throttling",
+      "pos": [
+        370,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/location-search/index.ts",
+          "line": 7,
+          "end_line": 23
+        }
+      ]
+    },
+    {
+      "id": "places",
+      "type": "cloud",
+      "label": "Google Places",
+      "sublabel": "Suggest / resolve location",
+      "pos": [
+        700,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/location-search/index.ts",
+          "line": 17,
+          "end_line": 20
+        }
+      ]
+    },
+    {
+      "id": "gps",
+      "type": "frontend",
+      "label": "Professional GPS",
+      "sublabel": "Consent + online fixes",
+      "pos": [
+        40,
+        230
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/lib/professionalLocation.ts",
+          "line": 28,
+          "end_line": 59
+        }
+      ]
+    },
+    {
+      "id": "discovery",
+      "type": "database",
+      "label": "Discovery RPC",
+      "sublabel": "Fresh GPS / private base",
+      "pos": [
+        370,
+        230
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 103,
+          "end_line": 117
+        },
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 2,
+          "end_line": 13
+        }
+      ]
+    },
+    {
+      "id": "samples",
+      "type": "frontend",
+      "label": "Portfolio uploads",
+      "sublabel": "JPEG preparation + 10 limit",
+      "pos": [
+        40,
+        420
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/components/PortfolioManager.tsx",
+          "line": 58,
+          "end_line": 78
+        }
+      ]
+    },
+    {
+      "id": "mediaEdge",
+      "type": "backend",
+      "label": "portfolio",
+      "sublabel": "Signed upload / moderation",
+      "pos": [
+        370,
+        420
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 63,
+          "end_line": 100
+        }
+      ]
+    },
+    {
+      "id": "vision",
+      "type": "cloud",
+      "label": "Google Cloud Vision",
+      "sublabel": "Text, logo, portrait checks",
+      "pos": [
+        700,
+        420
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/_shared/portfolioImageReview.ts",
+          "line": 13,
+          "end_line": 44
+        }
+      ]
+    },
+    {
+      "id": "mediaStore",
+      "type": "database",
+      "label": "Private media store",
+      "sublabel": "Reviewed copies / signed URLs",
+      "pos": [
+        370,
+        610
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 39,
+          "end_line": 47
+        },
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 100,
+          "end_line": 125
+        }
+      ]
+    },
+    {
+      "id": "connect",
+      "type": "frontend",
+      "label": "Instagram connection",
+      "sublabel": "Optional account control",
+      "pos": [
+        40,
+        800
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/components/RegistrationGate.tsx",
+          "line": 43,
+          "end_line": 57
+        },
+        {
+          "path": "mobile/src/components/PortfolioManager.tsx",
+          "line": 43,
+          "end_line": 50
+        }
+      ]
+    },
+    {
+      "id": "oauth",
+      "type": "backend",
+      "label": "portfolio + callback",
+      "sublabel": "State check + token exchange",
+      "pos": [
+        370,
+        800
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 15,
+          "end_line": 31
+        },
+        {
+          "path": "supabase/functions/portfolio-callback/index.ts",
+          "line": 9,
+          "end_line": 35
+        }
+      ]
+    },
+    {
+      "id": "meta",
+      "type": "cloud",
+      "label": "Instagram OAuth",
+      "sublabel": "instagram_business_basic",
+      "pos": [
+        700,
+        800
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 27,
+          "end_line": 31
+        },
+        {
+          "path": "supabase/functions/portfolio-callback/index.ts",
+          "line": 19,
+          "end_line": 35
+        }
+      ]
+    },
+    {
+      "id": "connections",
+      "type": "database",
+      "label": "Connection records",
+      "sublabel": "Encrypted token + expiry",
+      "pos": [
+        370,
+        990
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/portfolio-callback/index.ts",
+          "line": 32,
+          "end_line": 35
+        }
+      ]
+    },
+    {
+      "id": "outbox",
+      "type": "messagebus",
+      "label": "Notification outbox",
+      "sublabel": "Events, reminders, promotions",
+      "pos": [
+        40,
+        1180
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/notification-dispatch/index.ts",
+          "line": 13,
+          "end_line": 27
+        }
+      ]
+    },
+    {
+      "id": "push",
+      "type": "backend",
+      "label": "notification-dispatch",
+      "sublabel": "Leases + retry results",
+      "pos": [
+        370,
+        1180
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/notification-dispatch/index.ts",
+          "line": 24,
+          "end_line": 56
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "cloud",
+      "label": "FCM / APNs",
+      "sublabel": "Android / configured iOS",
+      "pos": [
+        700,
+        1180
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/notification-dispatch/index.ts",
+          "line": 19,
+          "end_line": 22
+        },
+        {
+          "path": "supabase/functions/notification-dispatch/index.ts",
+          "line": 38,
+          "end_line": 47
+        }
+      ]
+    },
+    {
+      "id": "device",
+      "type": "frontend",
+      "label": "Registered devices",
+      "sublabel": "Per-app token registration",
+      "pos": [
+        1000,
+        1180
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/lib/notifications.ts",
+          "line": 14,
+          "end_line": 38
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "search-placesEdge",
+      "from": "search",
+      "to": "placesEdge",
+      "label": "HTTPS search",
+      "variant": "default"
+    },
+    {
+      "id": "placesEdge-places",
+      "from": "placesEdge",
+      "to": "places",
+      "label": "server-key API",
+      "variant": "default"
+    },
+    {
+      "id": "gps-discovery",
+      "from": "gps",
+      "to": "discovery",
+      "label": "publish fix",
+      "variant": "security"
+    },
+    {
+      "id": "samples-mediaEdge",
+      "from": "samples",
+      "to": "mediaEdge",
+      "label": "signed upload",
+      "variant": "default"
+    },
+    {
+      "id": "mediaEdge-vision",
+      "from": "mediaEdge",
+      "to": "vision",
+      "label": "screen photo",
+      "variant": "security"
+    },
+    {
+      "id": "mediaEdge-mediaStore",
+      "from": "mediaEdge",
+      "to": "mediaStore",
+      "label": "publish / sign",
+      "variant": "default"
+    },
+    {
+      "id": "connect-oauth",
+      "from": "connect",
+      "to": "oauth",
+      "label": "connect",
+      "variant": "default"
+    },
+    {
+      "id": "oauth-meta",
+      "from": "oauth",
+      "to": "meta",
+      "label": "OAuth exchange",
+      "variant": "security"
+    },
+    {
+      "id": "oauth-connections",
+      "from": "oauth",
+      "to": "connections",
+      "label": "encrypted save",
+      "variant": "security"
+    },
+    {
+      "id": "outbox-push",
+      "from": "outbox",
+      "to": "push",
+      "label": "claim jobs",
+      "variant": "dashed"
+    },
+    {
+      "id": "push-providers",
+      "from": "push",
+      "to": "providers",
+      "label": "send push",
+      "variant": "dashed"
+    },
+    {
+      "id": "providers-device",
+      "from": "providers",
+      "to": "device",
+      "label": "notification",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Location privacy",
+      "items": [
+        "Online professionals use fresh GPS when available; offline discovery falls back to rounded home coordinates.",
+        "Exact registered home addresses are restricted to the owner and allowlisted admins."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Two separate badges",
+      "items": [
+        "Instagram connection verifies account control and gives the gold connection badge.",
+        "Manual profile approval is separate. Portrait screening does not prove identity or work ownership.",
+        "Instagram does not import portfolio media in the current normal flow. Work samples are uploaded separately."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Provider conditions",
+      "items": [
+        "Cloud Vision failures fail closed. Portraits require admin approval for public visibility.",
+        "Promotions require opt-in and enabled admin settings; transactional delivery is not blocked by promotion errors.",
+        "APNs sending is conditional on Apple credentials and a signed iOS build."
+      ]
+    }
+  ]
+}

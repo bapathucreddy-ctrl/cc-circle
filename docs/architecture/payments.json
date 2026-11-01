@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Artist House — payment and payout architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-artist-house-20261101110217/payments.html",
+    "repository": {
+      "url": "https://github.com/bapathucreddy-ctrl/cc-circle.git",
+      "revision": "f1e924b9f8eaec77598cf3e05b1c567c2f3dc2b3",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "checkout",
+      "type": "frontend",
+      "label": "Customer checkout",
+      "sublabel": "Accepted booking invoice",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-order/index.ts",
+          "line": 9,
+          "end_line": 18
+        }
+      ]
+    },
+    {
+      "id": "orders",
+      "type": "backend",
+      "label": "cashfree-order",
+      "sublabel": "Server amount + order ID",
+      "pos": [
+        340,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-order/index.ts",
+          "line": 19,
+          "end_line": 45
+        }
+      ]
+    },
+    {
+      "id": "cashfree",
+      "type": "cloud",
+      "label": "Cashfree PG",
+      "sublabel": "Checkout / payment API",
+      "pos": [
+        640,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-order/index.ts",
+          "line": 28,
+          "end_line": 45
+        }
+      ]
+    },
+    {
+      "id": "verification",
+      "type": "security",
+      "label": "Payment verification",
+      "sublabel": "HMAC + API reconciliation",
+      "pos": [
+        940,
+        40
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-webhook/index.ts",
+          "line": 7,
+          "end_line": 24
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "Service completion",
+      "sublabel": "End OTP finalizes service",
+      "pos": [
+        640,
+        250
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 231,
+          "end_line": 244
+        }
+      ]
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "Booking + payment state",
+      "sublabel": "Verified paid / completed",
+      "pos": [
+        940,
+        250
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/202611010001_delayed_payouts.sql",
+          "line": 13,
+          "end_line": 24
+        },
+        {
+          "path": "supabase/functions/cashfree-payouts/index.ts",
+          "line": 15,
+          "end_line": 20
+        }
+      ]
+    },
+    {
+      "id": "bank",
+      "type": "frontend",
+      "label": "Professional bank form",
+      "sublabel": "Connect / update details",
+      "pos": [
+        40,
+        460
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "mobile/src/screens/ProfessionalPayouts.tsx",
+          "line": 18,
+          "end_line": 33
+        }
+      ]
+    },
+    {
+      "id": "beneficiary",
+      "type": "backend",
+      "label": "cashfree-beneficiary",
+      "sublabel": "Cashfree beneficiary ID",
+      "pos": [
+        340,
+        460
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-beneficiary/index.ts",
+          "line": 9,
+          "end_line": 38
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "cashfree-payouts",
+      "sublabel": "Due scan + verified bank",
+      "pos": [
+        640,
+        460
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-payouts/index.ts",
+          "line": 7,
+          "end_line": 45
+        }
+      ]
+    },
+    {
+      "id": "queue",
+      "type": "messagebus",
+      "label": "24-hour payout queue",
+      "sublabel": "Later of payment / completion",
+      "pos": [
+        940,
+        460
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/202611010001_delayed_payouts.sql",
+          "line": 13,
+          "end_line": 24
+        },
+        {
+          "path": "supabase/migrations/202611010001_delayed_payouts.sql",
+          "line": 46,
+          "end_line": 55
+        },
+        {
+          "path": "docs/delayed-payouts.md",
+          "line": 3,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "refunds",
+      "type": "backend",
+      "label": "cashfree-refunds",
+      "sublabel": "Worker-gated refund retries",
+      "pos": [
+        340,
+        250
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-refunds/index.ts",
+          "line": 1,
+          "end_line": 39
+        },
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 170,
+          "end_line": 174
+        }
+      ]
+    },
+    {
+      "id": "payoutApi",
+      "type": "cloud",
+      "label": "Cashfree Payouts",
+      "sublabel": "Idempotent transfer ID",
+      "pos": [
+        640,
+        670
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-payouts/index.ts",
+          "line": 21,
+          "end_line": 49
+        }
+      ]
+    },
+    {
+      "id": "payoutState",
+      "type": "database",
+      "label": "Payout status history",
+      "sublabel": "Pending / processing / paid",
+      "pos": [
+        940,
+        670
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-payouts/index.ts",
+          "line": 43,
+          "end_line": 50
+        },
+        {
+          "path": "mobile/src/lib/professionalPayouts.ts",
+          "line": 27,
+          "end_line": 37
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "checkout-orders",
+      "from": "checkout",
+      "to": "orders",
+      "label": "request order",
+      "variant": "emphasis"
+    },
+    {
+      "id": "orders-cashfree",
+      "from": "orders",
+      "to": "cashfree",
+      "label": "create / reuse",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cashfree-verification",
+      "from": "cashfree",
+      "to": "verification",
+      "label": "signed webhook",
+      "variant": "security"
+    },
+    {
+      "id": "verification-ledger",
+      "from": "verification",
+      "to": "ledger",
+      "label": "reconcile paid",
+      "variant": "security"
+    },
+    {
+      "id": "service-ledger",
+      "from": "service",
+      "to": "ledger",
+      "label": "OTP completion",
+      "variant": "security"
+    },
+    {
+      "id": "ledger-queue",
+      "from": "ledger",
+      "to": "queue",
+      "label": "both + 24 hours",
+      "variant": "dashed"
+    },
+    {
+      "id": "queue-worker",
+      "from": "queue",
+      "to": "worker",
+      "label": "cron dispatch",
+      "variant": "dashed"
+    },
+    {
+      "id": "bank-beneficiary",
+      "from": "bank",
+      "to": "beneficiary",
+      "label": "bank details",
+      "variant": "security"
+    },
+    {
+      "id": "beneficiary-worker",
+      "from": "beneficiary",
+      "to": "worker",
+      "label": "saved bank ID",
+      "variant": "default"
+    },
+    {
+      "id": "worker-payoutApi",
+      "from": "worker",
+      "to": "payoutApi",
+      "label": "submit / reconcile",
+      "variant": "emphasis"
+    },
+    {
+      "id": "worker-payoutState",
+      "from": "worker",
+      "to": "payoutState",
+      "label": "record result",
+      "variant": "default"
+    },
+    {
+      "id": "refunds-cashfree",
+      "from": "refunds",
+      "to": "cashfree",
+      "label": "cancelled + paid",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Timing and funds",
+      "items": [
+        "Eligibility is 24 hours after BOTH completion and verified payment; bank receipt is not guaranteed at that exact time.",
+        "The deployed Cashfree environment remains sandbox. PG settlement and Payouts funding are separate."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Bank changes and retries",
+      "items": [
+        "Raw bank details go to Cashfree; app tables keep the beneficiary ID, account ending and IFSC.",
+        "A destination is frozen before transfer submission. Later bank edits cannot redirect that transfer.",
+        "The same transfer ID is reconciled on retries; mismatched amounts, environment or beneficiary stop submission."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Billing branches",
+      "items": [
+        "Per-session services normally require verified payment before travel.",
+        "Legacy hourly wedding invoices are finalized from OTP times and paid after service.",
+        "Eligible cancellations queue refunds; refunds and payout workers have separate responsibilities."
+      ]
+    }
+  ]
+}

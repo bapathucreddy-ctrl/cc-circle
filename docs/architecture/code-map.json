@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "diagram_type": "tree",
+  "meta": {
+    "title": "Artist House — repository and delivery map",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-artist-house-20261101110217/code-map.html",
+    "repository": {
+      "url": "https://github.com/bapathucreddy-ctrl/cc-circle.git",
+      "revision": "f1e924b9f8eaec77598cf3e05b1c567c2f3dc2b3",
+      "link_mode": "local-only"
+    }
+  },
+  "layout": {
+    "direction": "right"
+  },
+  "nodes": [
+    {
+      "id": "repo",
+      "label": "Artist House repository",
+      "sublabel": "Current local source snapshot",
+      "sources": [
+        {
+          "path": "README.md",
+          "line": 1,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "mobile",
+      "parent": "repo",
+      "label": "mobile/",
+      "sublabel": "Shared Expo / React Native app",
+      "sources": [
+        {
+          "path": "mobile/App.tsx",
+          "line": 1,
+          "end_line": 32
+        }
+      ]
+    },
+    {
+      "id": "customer",
+      "parent": "mobile",
+      "label": "Customer experience",
+      "sublabel": "Search, profiles, bookings, saves",
+      "sources": [
+        {
+          "path": "mobile/App.tsx",
+          "line": 36,
+          "end_line": 40
+        },
+        {
+          "path": "mobile/src/lib/api.ts",
+          "line": 127,
+          "end_line": 150
+        }
+      ]
+    },
+    {
+      "id": "pro",
+      "parent": "mobile",
+      "label": "Professional workspace",
+      "sublabel": "Work, events, payouts, profile",
+      "sources": [
+        {
+          "path": "mobile/src/ProfessionalWorkspace.tsx",
+          "line": 24,
+          "end_line": 68
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "parent": "mobile",
+      "label": "Shared UI + client services",
+      "sublabel": "Theme, cache, maps, native adapters",
+      "sources": [
+        {
+          "path": "mobile/src/hooks.ts",
+          "line": 21,
+          "end_line": 55
+        },
+        {
+          "path": "mobile/src/lib/supabase.ts",
+          "line": 30,
+          "end_line": 39
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "parent": "repo",
+      "label": "admin/",
+      "sublabel": "Browser UI + native Android shell",
+      "sources": [
+        {
+          "path": "admin/src/app.js",
+          "line": 14,
+          "end_line": 34
+        }
+      ]
+    },
+    {
+      "id": "moderation",
+      "parent": "admin",
+      "label": "Talent and bulk review",
+      "sublabel": "Original names, profile, approvals",
+      "sources": [
+        {
+          "path": "admin/src/professionals.js",
+          "line": 1,
+          "end_line": 24
+        },
+        {
+          "path": "admin/src/bulkRequests.js",
+          "line": 8,
+          "end_line": 18
+        }
+      ]
+    },
+    {
+      "id": "content",
+      "parent": "admin",
+      "label": "Content administration",
+      "sublabel": "Banners, service images / names",
+      "sources": [
+        {
+          "path": "admin/src/app.js",
+          "line": 25,
+          "end_line": 35
+        },
+        {
+          "path": "admin/src/serviceArtwork.js",
+          "line": 1,
+          "end_line": 28
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "parent": "admin",
+      "label": "Access and promotions",
+      "sublabel": "Owner reviews access requests",
+      "sources": [
+        {
+          "path": "admin/src/access.js",
+          "line": 7,
+          "end_line": 28
+        },
+        {
+          "path": "admin/src/promotions.js",
+          "line": 1,
+          "end_line": 15
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "parent": "repo",
+      "label": "supabase/",
+      "sublabel": "Database-first application backend",
+      "sources": [
+        {
+          "path": "supabase/config.toml",
+          "line": 1,
+          "end_line": 15
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "parent": "backend",
+      "label": "migrations/",
+      "sublabel": "44 ordered SQL migrations",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610080001_marketplace.sql",
+          "line": 150,
+          "end_line": 176
+        },
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 1,
+          "end_line": 13
+        },
+        {
+          "path": "supabase/migrations/202611010001_delayed_payouts.sql",
+          "line": 1,
+          "end_line": 24
+        }
+      ]
+    },
+    {
+      "id": "edgefn",
+      "parent": "backend",
+      "label": "functions/",
+      "sublabel": "Payments, media, search, push",
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-order/index.ts",
+          "line": 1,
+          "end_line": 18
+        },
+        {
+          "path": "supabase/functions/portfolio/index.ts",
+          "line": 9,
+          "end_line": 31
+        },
+        {
+          "path": "supabase/functions/notification-dispatch/index.ts",
+          "line": 13,
+          "end_line": 27
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "parent": "backend",
+      "label": "Private / public boundaries",
+      "sublabel": "RLS, session gates, admin allowlist",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610080001_marketplace.sql",
+          "line": 150,
+          "end_line": 176
+        },
+        {
+          "path": "supabase/functions/_shared/payments.ts",
+          "line": 21,
+          "end_line": 38
+        },
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 158,
+          "end_line": 170
+        }
+      ]
+    },
+    {
+      "id": "web",
+      "parent": "repo",
+      "label": "Web properties",
+      "sublabel": "Marketing and policy hosting",
+      "sources": [
+        {
+          "path": "docs/circle-domain-setup.md",
+          "line": 1,
+          "end_line": 7
+        }
+      ]
+    },
+    {
+      "id": "landing",
+      "parent": "web",
+      "label": "Landing page",
+      "sublabel": "Static Sites deployment",
+      "sources": [
+        {
+          "path": "landing-brand-update/.openai/hosting.json",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "policies",
+      "parent": "web",
+      "label": "Privacy policy artifact",
+      "sublabel": "artifacts/privacy-site/index.html",
+      "sources": [
+        {
+          "path": "artifacts/privacy-site/index.html",
+          "line": 1,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "delivery",
+      "parent": "repo",
+      "label": "Build and validation",
+      "sublabel": "Separate native identities",
+      "sources": [
+        {
+          "path": "mobile/app.config.ts",
+          "line": 3,
+          "end_line": 28
+        }
+      ]
+    },
+    {
+      "id": "expo",
+      "parent": "delivery",
+      "label": "Expo / EAS profiles",
+      "sublabel": "Customer + Professional variants",
+      "sources": [
+        {
+          "path": "mobile/eas.json",
+          "line": 22,
+          "end_line": 47
+        },
+        {
+          "path": "mobile/scripts/app.cjs",
+          "line": 4,
+          "end_line": 24
+        }
+      ]
+    },
+    {
+      "id": "adminBuild",
+      "parent": "delivery",
+      "label": "Admin Android build",
+      "sublabel": "esbuild assets in native WebView",
+      "sources": [
+        {
+          "path": "admin/scripts/build.cjs",
+          "line": 1,
+          "end_line": 12
+        },
+        {
+          "path": "admin/android/app/build.gradle",
+          "line": 1,
+          "end_line": 17
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "parent": "delivery",
+      "label": "Tests and release checks",
+      "sublabel": "TypeScript, SQL tests, APK checks",
+      "sources": [
+        {
+          "path": "mobile/package.json",
+          "line": 7,
+          "end_line": 27
+        },
+        {
+          "path": "supabase/package.json",
+          "line": 1,
+          "end_line": 12
+        },
+        {
+          "path": "scripts/verify-payout-release-apk.cjs",
+          "line": 1,
+          "end_line": 22
+        }
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "slate",
+      "title": "Scope",
+      "items": [
+        "This tree shows ownership and containment, not runtime network calls. Open the system map for connections.",
+        "Build caches, node_modules, credentials, binary assets and historical preview artifacts are deliberately excluded."
+      ]
+    }
+  ]
+}
