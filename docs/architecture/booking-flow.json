@@ -1,0 +1,386 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Artist House — individual and bulk booking workflow",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-artist-house-20261101110217/booking-flow.html",
+    "repository": {
+      "url": "https://github.com/bapathucreddy-ctrl/cc-circle.git",
+      "revision": "f1e924b9f8eaec77598cf3e05b1c567c2f3dc2b3",
+      "link_mode": "local-only"
+    }
+  },
+  "lanes": [
+    {
+      "id": "customer",
+      "label": "Customer"
+    },
+    {
+      "id": "professional",
+      "label": "Professional"
+    },
+    {
+      "id": "admin",
+      "label": "Admin approval"
+    },
+    {
+      "id": "server",
+      "label": "Server state / money"
+    }
+  ],
+  "mainPath": [
+    "browse",
+    "request",
+    "response",
+    "accept",
+    "confirmed",
+    "payment",
+    "journey",
+    "otp",
+    "complete"
+  ],
+  "nodes": [
+    {
+      "id": "browse",
+      "lane": "customer",
+      "col": 0,
+      "type": "frontend",
+      "label": "Choose service",
+      "sublabel": "Nearby + available options",
+      "sources": [
+        {
+          "path": "mobile/src/lib/api.ts",
+          "line": 5,
+          "end_line": 10
+        }
+      ]
+    },
+    {
+      "id": "request",
+      "lane": "customer",
+      "col": 1,
+      "type": "frontend",
+      "label": "Request booking",
+      "sublabel": "Single service or event team",
+      "sources": [
+        {
+          "path": "mobile/src/lib/api.ts",
+          "line": 49,
+          "end_line": 56
+        },
+        {
+          "path": "mobile/src/lib/teamRequests.ts",
+          "line": 1,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "response",
+      "lane": "professional",
+      "col": 1,
+      "type": "frontend",
+      "label": "Review request",
+      "sublabel": "Accept or decline",
+      "sources": [
+        {
+          "path": "mobile/src/screens/TeamRequests.tsx",
+          "line": 180,
+          "end_line": 199
+        }
+      ]
+    },
+    {
+      "id": "decline",
+      "lane": "professional",
+      "col": 0,
+      "type": "backend",
+      "label": "Declined",
+      "sublabel": "No confirmed reservation",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 128,
+          "end_line": 136
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "lane": "professional",
+      "col": 2,
+      "type": "backend",
+      "label": "Professional accepts",
+      "sublabel": "Bulk stays pending approval",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 150,
+          "end_line": 156
+        },
+        {
+          "path": "admin/src/bulkRequests.js",
+          "line": 8,
+          "end_line": 14
+        }
+      ]
+    },
+    {
+      "id": "approval",
+      "lane": "admin",
+      "col": 2,
+      "type": "security",
+      "label": "Review bulk response",
+      "sublabel": "Allowlisted admin only",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 167,
+          "end_line": 187
+        }
+      ]
+    },
+    {
+      "id": "reject",
+      "lane": "admin",
+      "col": 1,
+      "type": "backend",
+      "label": "Admin rejects",
+      "sublabel": "Response not confirmed",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 174,
+          "end_line": 178
+        }
+      ]
+    },
+    {
+      "id": "confirmed",
+      "lane": "admin",
+      "col": 3,
+      "type": "database",
+      "label": "Accepted booking",
+      "sublabel": "Admin gate for bulk requests",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610310001_professional_discovery_bulk_approval.sql",
+          "line": 188,
+          "end_line": 191
+        },
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 164,
+          "end_line": 169
+        }
+      ]
+    },
+    {
+      "id": "payment",
+      "lane": "customer",
+      "col": 3,
+      "type": "security",
+      "label": "Verified payment",
+      "sublabel": "Before travel for fixed fees",
+      "sources": [
+        {
+          "path": "supabase/functions/cashfree-order/index.ts",
+          "line": 11,
+          "end_line": 18
+        },
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 164,
+          "end_line": 166
+        }
+      ]
+    },
+    {
+      "id": "journey",
+      "lane": "professional",
+      "col": 4,
+      "type": "frontend",
+      "label": "Start journey",
+      "sublabel": "Tracking then arrival",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 164,
+          "end_line": 174
+        }
+      ]
+    },
+    {
+      "id": "otp",
+      "lane": "professional",
+      "col": 5,
+      "type": "security",
+      "label": "Start / end OTPs",
+      "sublabel": "Service verification",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 179,
+          "end_line": 199
+        },
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 231,
+          "end_line": 244
+        }
+      ]
+    },
+    {
+      "id": "complete",
+      "lane": "server",
+      "col": 5,
+      "type": "database",
+      "label": "Service completed",
+      "sublabel": "Close chat; hourly invoice",
+      "sources": [
+        {
+          "path": "supabase/migrations/202610160008_wedding_hourly_billing.sql",
+          "line": 236,
+          "end_line": 244
+        },
+        {
+          "path": "supabase/migrations/202610160003_activity_and_paid_chat.sql",
+          "line": 40,
+          "end_line": 50
+        }
+      ]
+    },
+    {
+      "id": "payout",
+      "lane": "server",
+      "col": 4,
+      "type": "messagebus",
+      "label": "Payout eligibility",
+      "sublabel": "Both events + 24 hours",
+      "sources": [
+        {
+          "path": "supabase/migrations/202611010001_delayed_payouts.sql",
+          "line": 13,
+          "end_line": 24
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "browse-request",
+      "from": "browse",
+      "to": "request",
+      "label": "select",
+      "variant": "default"
+    },
+    {
+      "id": "request-response",
+      "from": "request",
+      "to": "response",
+      "label": "submit",
+      "variant": "default"
+    },
+    {
+      "id": "response-accept",
+      "from": "response",
+      "to": "accept",
+      "label": "accept",
+      "variant": "default"
+    },
+    {
+      "id": "response-decline",
+      "from": "response",
+      "to": "decline",
+      "label": "decline",
+      "variant": "default",
+      "role": "branch"
+    },
+    {
+      "id": "accept-approval",
+      "from": "accept",
+      "to": "approval",
+      "label": "bulk",
+      "variant": "security"
+    },
+    {
+      "id": "accept-confirmed",
+      "from": "accept",
+      "to": "confirmed",
+      "label": "individual",
+      "variant": "default"
+    },
+    {
+      "id": "approval-confirmed",
+      "from": "approval",
+      "to": "confirmed",
+      "label": "approve",
+      "variant": "security"
+    },
+    {
+      "id": "approval-reject",
+      "from": "approval",
+      "to": "reject",
+      "label": "reject",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "confirmed-payment",
+      "from": "confirmed",
+      "to": "payment",
+      "label": "fixed fee",
+      "variant": "default"
+    },
+    {
+      "id": "payment-journey",
+      "from": "payment",
+      "to": "journey",
+      "label": "verified",
+      "variant": "security"
+    },
+    {
+      "id": "journey-otp",
+      "from": "journey",
+      "to": "otp",
+      "label": "arrived",
+      "variant": "default"
+    },
+    {
+      "id": "otp-complete",
+      "from": "otp",
+      "to": "complete",
+      "label": "end verified",
+      "variant": "security"
+    },
+    {
+      "id": "complete-payout",
+      "from": "complete",
+      "to": "payout",
+      "label": "paid + completed",
+      "variant": "dashed",
+      "role": "async"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Hourly exception",
+      "items": [
+        "Hourly wedding bookings can start without prepayment. End OTP finalizes billable time; payment follows completion.",
+        "The money diagram shows the payout gate, which waits for both payment and completion."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Other lifecycle branches",
+      "items": [
+        "A customer can review completed, paid work and save a professional.",
+        "Chat is allowed only for paid active bookings and is deleted when the service closes.",
+        "Permitted paid cancellations enter a separate refund queue; declined requests never create a payout."
+      ]
+    }
+  ]
+}

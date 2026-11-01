@@ -1,0 +1,33 @@
+{
+  "snapshot": "f1e924b9f8eaec77598cf3e05b1c567c2f3dc2b3",
+  "mainRepositoryHead": "838b46d85685ed7e6f5f1a65e4ed0fc8869d21d2",
+  "views": [
+    {
+      "slug": "system",
+      "title": "System architecture",
+      "file": "system.html"
+    },
+    {
+      "slug": "booking-flow",
+      "title": "Booking workflow",
+      "file": "booking-flow.html"
+    },
+    {
+      "slug": "payments",
+      "title": "Payments and payouts",
+      "file": "payments.html"
+    },
+    {
+      "slug": "integrations",
+      "title": "External integrations",
+      "file": "integrations.html"
+    },
+    {
+      "slug": "code-map",
+      "title": "Repository and builds",
+      "file": "code-map.html"
+    }
+  ],
+  "automatedChecksPassed": true,
+  "visualInspectionPerformed": false
+}
