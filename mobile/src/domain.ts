@@ -12,6 +12,7 @@ export type Professional = {
   longitude: number; latitude: number; distance_km?: number;
   portfolio_urls: string[];
   booking_price_paise?: number | null;
+  availability_status?: 'online'|'offline'|'busy';
   location_updated_at?: string | null;
   location_accuracy_meters?: number | null;
   public_specs?: Record<string, unknown>;

@@ -5151,6 +5151,1682 @@ create trigger validate_campaign_picks before insert or update on public.home_ca
  for each row execute function private.validate_campaign_picks();
 notify pgrst,''reload schema'';
 ']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610230001') then
+      raise exception 'Migration 202610230001 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- The existing explicitly allowlisted Circle admins also review professional profiles.
+create table private.professional_reviews (
+ professional_id uuid primary key references public.professionals(id) on delete cascade,
+ status text not null check(status in ('approved','rejected')),
+ reviewed_by uuid references auth.users(id) on delete set null,
+ reviewed_at timestamptz not null default now(),
+ note text not null default '' check(length(note)<=1000)
+);
+create table private.professional_review_history (
+ id bigint generated always as identity primary key,
+ professional_id uuid not null references public.professionals(id) on delete cascade,
+ status text not null check(status in ('approved','rejected')),
+ reviewed_by uuid references auth.users(id) on delete set null,
+ reviewed_at timestamptz not null default now(),
+ note text not null default '' check(length(note)<=1000)
+);
+alter table private.professional_reviews enable row level security;
+alter table private.professional_review_history enable row level security;
+revoke all on private.professional_reviews,private.professional_review_history from public,anon,authenticated;
+grant all on private.professional_reviews,private.professional_review_history to service_role;
+-- Preserve legacy timestamps; the badge checks the explicit admin decision below.
+create function public.professional_approval_status(p_id uuid) returns boolean
+language sql stable security definer set search_path='' as $$
+ select exists(select 1 from private.professional_reviews where professional_id=p_id and status='approved');
+$$;
+revoke all on function public.professional_approval_status(uuid) from public,anon,authenticated;
+grant execute on function public.professional_approval_status(uuid) to service_role;
+
+create function public.admin_list_professionals(p_offset integer default 0,p_status text default 'all')
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501'; end if;
+ if p_offset is null or p_offset<0 or p_status is null or p_status not in ('all','pending','approved','rejected') then raise exception 'Invalid filter'; end if;
+ return jsonb_build_object('total',(select count(*) from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id where (p.id is not null or a.professional_display_name is not null) and (p_status='all' or coalesce(r.status,'pending')=p_status)),
+ 'profiles',coalesce((select jsonb_agg(to_jsonb(t)) from (
+ select a.id,coalesce(p.display_name,a.professional_display_name) as display_name,p.category,p.city,a.created_at,coalesce(p.is_published,false) as is_published,coalesce(r.status,'pending') as review_status,r.reviewed_at
+ from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id
+ where (p.id is not null or a.professional_display_name is not null) and (p_status='all' or coalesce(r.status,'pending')=p_status)
+ order by a.created_at desc,a.id limit 50 offset p_offset
+ ) t),'[]'::jsonb));
+end;$$;
+
+create function public.admin_professional_profile(p_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501'; end if;
+ select jsonb_build_object('id',p.id,'display_name',p.display_name,'category',p.category,'city',p.city,'bio',p.bio,'specialties',p.specialties,'public_specs',p.public_specs,'is_published',p.is_published,'available_now',p.available_now,'verified_at',p.verified_at,
+ 'review_status',coalesce(r.status,'pending'),'reviewed_at',r.reviewed_at,'note',coalesce(r.note,''),
+ 'avatar_path',(select storage_path from public.professional_photos where professional_id=p.id),
+ 'services',coalesce((select jsonb_agg(jsonb_build_object('name',s.name,'description',s.description,'amount_paise',s.amount_paise,'active',s.active) order by s.name) from public.services s where s.professional_id=p.id),'[]'::jsonb),
+ 'media',coalesce((select jsonb_agg(to_jsonb(m)) from (select id,kind,storage_path,position from public.portfolio_media where professional_id=p.id and provider='upload' and kind='image' order by position,updated_at desc limit 10) m),'[]'::jsonb),
+ 'reviews',coalesce((select jsonb_agg(to_jsonb(v)) from (select rating,comment,created_at from public.booking_reviews where professional_id=p.id order by created_at desc limit 20) v),'[]'::jsonb)) into result
+ from public.professionals p left join private.professional_reviews r on r.professional_id=p.id where p.id=p_id;
+ if result is null then
+  select jsonb_build_object('id',id,'display_name',professional_display_name,'category','Profile incomplete','city','','bio','This professional has signed up but has not completed their professional details.','specialties','[]'::jsonb,'public_specs','{}'::jsonb,'review_status','pending','reviewed_at',null,'note','','incomplete',true,'services','[]'::jsonb,'media','[]'::jsonb,'reviews','[]'::jsonb)
+  into result from public.profiles where id=p_id and professional_display_name is not null;
+ end if;
+ if result is null then raise exception 'Professional not found'; end if;
+ return result;
+end;$$;
+
+create function public.review_professional(p_id uuid,p_status text,p_note text default '',p_expected_reviewed_at timestamptz default null)
+returns void language plpgsql security definer set search_path='' as $$
+declare previous timestamptz; stamp timestamptz:=clock_timestamp();
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501'; end if;
+ if p_status is null or p_status not in ('approved','rejected') or p_note is null or length(p_note)>1000 then raise exception 'Invalid review'; end if;
+ perform 1 from public.professionals where id=p_id for update;
+ if not found then raise exception 'Professional not found'; end if;
+ select reviewed_at into previous from private.professional_reviews where professional_id=p_id;
+ if previous is distinct from p_expected_reviewed_at then raise exception 'This profile was reviewed by another admin. Refresh and try again.'; end if;
+ insert into private.professional_reviews(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,auth.uid(),stamp,trim(p_note))
+ on conflict(professional_id) do update set status=excluded.status,reviewed_by=excluded.reviewed_by,reviewed_at=excluded.reviewed_at,note=excluded.note;
+ insert into private.professional_review_history(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,auth.uid(),stamp,trim(p_note));
+ update public.professionals set verified_at=case when p_status='approved' then stamp else null end where id=p_id;
+end;$$;
+revoke all on function public.admin_list_professionals(integer,text),public.admin_professional_profile(uuid),public.review_professional(uuid,text,text,timestamptz) from public,anon;
+grant execute on function public.admin_list_professionals(integer,text),public.admin_professional_profile(uuid),public.review_professional(uuid,text,text,timestamptz) to authenticated;
+-- Private photos are still private; only allowlisted admins can sign review URLs.
+do $$ begin
+ if exists(select 1 from information_schema.columns where table_schema='storage' and table_name='objects' and column_name='bucket_id') then
+  create policy admin_review_portfolio on storage.objects for select to authenticated
+   using(bucket_id='portfolio-work' and public.is_banner_admin());
+ end if;
+end $$;
+notify pgrst,'reload schema';
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610230001','professional_approvals',array['-- The existing explicitly allowlisted Circle admins also review professional profiles.
+create table private.professional_reviews (
+ professional_id uuid primary key references public.professionals(id) on delete cascade,
+ status text not null check(status in (''approved'',''rejected'')),
+ reviewed_by uuid references auth.users(id) on delete set null,
+ reviewed_at timestamptz not null default now(),
+ note text not null default '''' check(length(note)<=1000)
+);
+create table private.professional_review_history (
+ id bigint generated always as identity primary key,
+ professional_id uuid not null references public.professionals(id) on delete cascade,
+ status text not null check(status in (''approved'',''rejected'')),
+ reviewed_by uuid references auth.users(id) on delete set null,
+ reviewed_at timestamptz not null default now(),
+ note text not null default '''' check(length(note)<=1000)
+);
+alter table private.professional_reviews enable row level security;
+alter table private.professional_review_history enable row level security;
+revoke all on private.professional_reviews,private.professional_review_history from public,anon,authenticated;
+grant all on private.professional_reviews,private.professional_review_history to service_role;
+-- Preserve legacy timestamps; the badge checks the explicit admin decision below.
+create function public.professional_approval_status(p_id uuid) returns boolean
+language sql stable security definer set search_path='''' as $$
+ select exists(select 1 from private.professional_reviews where professional_id=p_id and status=''approved'');
+$$;
+revoke all on function public.professional_approval_status(uuid) from public,anon,authenticated;
+grant execute on function public.professional_approval_status(uuid) to service_role;
+
+create function public.admin_list_professionals(p_offset integer default 0,p_status text default ''all'')
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501''; end if;
+ if p_offset is null or p_offset<0 or p_status is null or p_status not in (''all'',''pending'',''approved'',''rejected'') then raise exception ''Invalid filter''; end if;
+ return jsonb_build_object(''total'',(select count(*) from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id where (p.id is not null or a.professional_display_name is not null) and (p_status=''all'' or coalesce(r.status,''pending'')=p_status)),
+ ''profiles'',coalesce((select jsonb_agg(to_jsonb(t)) from (
+ select a.id,coalesce(p.display_name,a.professional_display_name) as display_name,p.category,p.city,a.created_at,coalesce(p.is_published,false) as is_published,coalesce(r.status,''pending'') as review_status,r.reviewed_at
+ from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id
+ where (p.id is not null or a.professional_display_name is not null) and (p_status=''all'' or coalesce(r.status,''pending'')=p_status)
+ order by a.created_at desc,a.id limit 50 offset p_offset
+ ) t),''[]''::jsonb));
+end;$$;
+
+create function public.admin_professional_profile(p_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501''; end if;
+ select jsonb_build_object(''id'',p.id,''display_name'',p.display_name,''category'',p.category,''city'',p.city,''bio'',p.bio,''specialties'',p.specialties,''public_specs'',p.public_specs,''is_published'',p.is_published,''available_now'',p.available_now,''verified_at'',p.verified_at,
+ ''review_status'',coalesce(r.status,''pending''),''reviewed_at'',r.reviewed_at,''note'',coalesce(r.note,''''),
+ ''avatar_path'',(select storage_path from public.professional_photos where professional_id=p.id),
+ ''services'',coalesce((select jsonb_agg(jsonb_build_object(''name'',s.name,''description'',s.description,''amount_paise'',s.amount_paise,''active'',s.active) order by s.name) from public.services s where s.professional_id=p.id),''[]''::jsonb),
+ ''media'',coalesce((select jsonb_agg(to_jsonb(m)) from (select id,kind,storage_path,position from public.portfolio_media where professional_id=p.id and provider=''upload'' and kind=''image'' order by position,updated_at desc limit 10) m),''[]''::jsonb),
+ ''reviews'',coalesce((select jsonb_agg(to_jsonb(v)) from (select rating,comment,created_at from public.booking_reviews where professional_id=p.id order by created_at desc limit 20) v),''[]''::jsonb)) into result
+ from public.professionals p left join private.professional_reviews r on r.professional_id=p.id where p.id=p_id;
+ if result is null then
+  select jsonb_build_object(''id'',id,''display_name'',professional_display_name,''category'',''Profile incomplete'',''city'','''',''bio'',''This professional has signed up but has not completed their professional details.'',''specialties'',''[]''::jsonb,''public_specs'',''{}''::jsonb,''review_status'',''pending'',''reviewed_at'',null,''note'','''',''incomplete'',true,''services'',''[]''::jsonb,''media'',''[]''::jsonb,''reviews'',''[]''::jsonb)
+  into result from public.profiles where id=p_id and professional_display_name is not null;
+ end if;
+ if result is null then raise exception ''Professional not found''; end if;
+ return result;
+end;$$;
+
+create function public.review_professional(p_id uuid,p_status text,p_note text default '''',p_expected_reviewed_at timestamptz default null)
+returns void language plpgsql security definer set search_path='''' as $$
+declare previous timestamptz; stamp timestamptz:=clock_timestamp();
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501''; end if;
+ if p_status is null or p_status not in (''approved'',''rejected'') or p_note is null or length(p_note)>1000 then raise exception ''Invalid review''; end if;
+ perform 1 from public.professionals where id=p_id for update;
+ if not found then raise exception ''Professional not found''; end if;
+ select reviewed_at into previous from private.professional_reviews where professional_id=p_id;
+ if previous is distinct from p_expected_reviewed_at then raise exception ''This profile was reviewed by another admin. Refresh and try again.''; end if;
+ insert into private.professional_reviews(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,auth.uid(),stamp,trim(p_note))
+ on conflict(professional_id) do update set status=excluded.status,reviewed_by=excluded.reviewed_by,reviewed_at=excluded.reviewed_at,note=excluded.note;
+ insert into private.professional_review_history(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,auth.uid(),stamp,trim(p_note));
+ update public.professionals set verified_at=case when p_status=''approved'' then stamp else null end where id=p_id;
+end;$$;
+revoke all on function public.admin_list_professionals(integer,text),public.admin_professional_profile(uuid),public.review_professional(uuid,text,text,timestamptz) from public,anon;
+grant execute on function public.admin_list_professionals(integer,text),public.admin_professional_profile(uuid),public.review_professional(uuid,text,text,timestamptz) to authenticated;
+-- Private photos are still private; only allowlisted admins can sign review URLs.
+do $$ begin
+ if exists(select 1 from information_schema.columns where table_schema=''storage'' and table_name=''objects'' and column_name=''bucket_id'') then
+  create policy admin_review_portfolio on storage.objects for select to authenticated
+   using(bucket_id=''portfolio-work'' and public.is_banner_admin());
+ end if;
+end $$;
+notify pgrst,''reload schema'';
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610230002') then
+      raise exception 'Migration 202610230002 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Record decisions using the session-aware actor helper.
+create or replace function public.review_professional(p_id uuid,p_status text,p_note text default '',p_expected_reviewed_at timestamptz default null)
+returns void language plpgsql security definer set search_path='' as $$
+declare previous timestamptz; stamp timestamptz:=clock_timestamp();
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501'; end if;
+ if p_status is null or p_status not in ('approved','rejected') or p_note is null or length(p_note)>1000 then raise exception 'Invalid review'; end if;
+ perform 1 from public.professionals where id=p_id for update;
+ if not found then raise exception 'Professional not found'; end if;
+ select reviewed_at into previous from private.professional_reviews where professional_id=p_id;
+ if previous is distinct from p_expected_reviewed_at then raise exception 'This profile was reviewed by another admin. Refresh and try again.'; end if;
+ insert into private.professional_reviews(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,private.current_user_id(),stamp,trim(p_note))
+ on conflict(professional_id) do update set status=excluded.status,reviewed_by=excluded.reviewed_by,reviewed_at=excluded.reviewed_at,note=excluded.note;
+ insert into private.professional_review_history(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,private.current_user_id(),stamp,trim(p_note));
+ update public.professionals set verified_at=case when p_status='approved' then stamp else null end where id=p_id;
+end;$$;
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610230002','review_session_guard',array['-- Record decisions using the session-aware actor helper.
+create or replace function public.review_professional(p_id uuid,p_status text,p_note text default '''',p_expected_reviewed_at timestamptz default null)
+returns void language plpgsql security definer set search_path='''' as $$
+declare previous timestamptz; stamp timestamptz:=clock_timestamp();
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501''; end if;
+ if p_status is null or p_status not in (''approved'',''rejected'') or p_note is null or length(p_note)>1000 then raise exception ''Invalid review''; end if;
+ perform 1 from public.professionals where id=p_id for update;
+ if not found then raise exception ''Professional not found''; end if;
+ select reviewed_at into previous from private.professional_reviews where professional_id=p_id;
+ if previous is distinct from p_expected_reviewed_at then raise exception ''This profile was reviewed by another admin. Refresh and try again.''; end if;
+ insert into private.professional_reviews(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,private.current_user_id(),stamp,trim(p_note))
+ on conflict(professional_id) do update set status=excluded.status,reviewed_by=excluded.reviewed_by,reviewed_at=excluded.reviewed_at,note=excluded.note;
+ insert into private.professional_review_history(professional_id,status,reviewed_by,reviewed_at,note) values(p_id,p_status,private.current_user_id(),stamp,trim(p_note));
+ update public.professionals set verified_at=case when p_status=''approved'' then stamp else null end where id=p_id;
+end;$$;
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610230003') then
+      raise exception 'Migration 202610230003 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Expose connected-account status only, never Instagram identifiers or credentials.
+create or replace function public.admin_professional_profile(p_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501'; end if;
+ select jsonb_build_object('id',p.id,'display_name',p.display_name,'category',p.category,'city',p.city,'bio',p.bio,'specialties',p.specialties,'public_specs',p.public_specs,'is_published',p.is_published,'available_now',p.available_now,'verified_at',p.verified_at,
+ 'review_status',coalesce(r.status,'pending'),'reviewed_at',r.reviewed_at,'note',coalesce(r.note,''),
+ 'instagram_connected',exists(select 1 from public.portfolio_connections c where c.professional_id=p.id and c.provider='instagram' and c.expires_at>now()),
+ 'avatar_path',(select storage_path from public.professional_photos where professional_id=p.id),
+ 'services',coalesce((select jsonb_agg(jsonb_build_object('name',s.name,'description',s.description,'amount_paise',s.amount_paise,'active',s.active) order by s.name) from public.services s where s.professional_id=p.id),'[]'::jsonb),
+ 'media',coalesce((select jsonb_agg(to_jsonb(m)) from (select id,kind,storage_path,position from public.portfolio_media where professional_id=p.id and provider='upload' and kind='image' order by position,updated_at desc limit 10) m),'[]'::jsonb),
+ 'reviews',coalesce((select jsonb_agg(to_jsonb(v)) from (select rating,comment,created_at from public.booking_reviews where professional_id=p.id order by created_at desc limit 20) v),'[]'::jsonb)) into result
+ from public.professionals p left join private.professional_reviews r on r.professional_id=p.id where p.id=p_id;
+ if result is null then
+  select jsonb_build_object('id',id,'display_name',professional_display_name,'category','Profile incomplete','city','','bio','This professional has signed up but has not completed their professional details.','specialties','[]'::jsonb,'public_specs','{}'::jsonb,'review_status','pending','reviewed_at',null,'note','','incomplete',true,'services','[]'::jsonb,'media','[]'::jsonb,'reviews','[]'::jsonb)
+  into result from public.profiles where id=p_id and professional_display_name is not null;
+ end if;
+ if result is null then raise exception 'Professional not found'; end if;
+ return result;
+end;$$;
+
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610230003','profile_connection_badges',array['-- Expose connected-account status only, never Instagram identifiers or credentials.
+create or replace function public.admin_professional_profile(p_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501''; end if;
+ select jsonb_build_object(''id'',p.id,''display_name'',p.display_name,''category'',p.category,''city'',p.city,''bio'',p.bio,''specialties'',p.specialties,''public_specs'',p.public_specs,''is_published'',p.is_published,''available_now'',p.available_now,''verified_at'',p.verified_at,
+ ''review_status'',coalesce(r.status,''pending''),''reviewed_at'',r.reviewed_at,''note'',coalesce(r.note,''''),
+ ''instagram_connected'',exists(select 1 from public.portfolio_connections c where c.professional_id=p.id and c.provider=''instagram'' and c.expires_at>now()),
+ ''avatar_path'',(select storage_path from public.professional_photos where professional_id=p.id),
+ ''services'',coalesce((select jsonb_agg(jsonb_build_object(''name'',s.name,''description'',s.description,''amount_paise'',s.amount_paise,''active'',s.active) order by s.name) from public.services s where s.professional_id=p.id),''[]''::jsonb),
+ ''media'',coalesce((select jsonb_agg(to_jsonb(m)) from (select id,kind,storage_path,position from public.portfolio_media where professional_id=p.id and provider=''upload'' and kind=''image'' order by position,updated_at desc limit 10) m),''[]''::jsonb),
+ ''reviews'',coalesce((select jsonb_agg(to_jsonb(v)) from (select rating,comment,created_at from public.booking_reviews where professional_id=p.id order by created_at desc limit 20) v),''[]''::jsonb)) into result
+ from public.professionals p left join private.professional_reviews r on r.professional_id=p.id where p.id=p_id;
+ if result is null then
+  select jsonb_build_object(''id'',id,''display_name'',professional_display_name,''category'',''Profile incomplete'',''city'','''',''bio'',''This professional has signed up but has not completed their professional details.'',''specialties'',''[]''::jsonb,''public_specs'',''{}''::jsonb,''review_status'',''pending'',''reviewed_at'',null,''note'','''',''incomplete'',true,''services'',''[]''::jsonb,''media'',''[]''::jsonb,''reviews'',''[]''::jsonb)
+  into result from public.profiles where id=p_id and professional_display_name is not null;
+ end if;
+ if result is null then raise exception ''Professional not found''; end if;
+ return result;
+end;$$;
+
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610230004') then
+      raise exception 'Migration 202610230004 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+create table private.admin_access_requests (
+ user_id uuid primary key references auth.users(id) on delete cascade,
+ email text not null, status text not null default 'pending' check(status in ('pending','approved','rejected')),
+ requested_at timestamptz not null default now(),reviewed_at timestamptz,reviewed_by uuid references auth.users(id) on delete set null
+);
+alter table private.admin_access_requests enable row level security;
+revoke all on private.admin_access_requests from public,anon,authenticated;
+grant all on private.admin_access_requests to service_role;
+create function public.is_admin_access_owner() returns boolean language sql stable security definer set search_path='' as $$
+ select public.is_banner_admin() and exists(select 1 from auth.users u where u.id=private.current_user_id() and lower(to_jsonb(u)->>'email')='chetan.reddy@cclabs.space' and to_jsonb(u)->>'email_confirmed_at' is not null);
+$$;
+create function public.request_admin_access() returns text language plpgsql security definer set search_path='' as $$
+declare who uuid:=private.current_user_id();mail text;confirmed text;state text;
+begin
+ select lower(to_jsonb(u)->>'email'),to_jsonb(u)->>'email_confirmed_at' into mail,confirmed from auth.users u where id=who;
+ if who is null or mail is null or confirmed is null then raise exception 'Sign in with a verified email first';end if;
+ if public.is_banner_admin() then return 'approved';end if;
+ insert into private.admin_access_requests(user_id,email) values(who,mail) on conflict(user_id) do nothing;
+ select status into state from private.admin_access_requests where user_id=who;
+ return state;
+end;$$;
+create function public.admin_access_requests() returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if not public.is_admin_access_owner() then raise exception 'Only the Circle owner can review admin access' using errcode='42501';end if;
+ return coalesce((select jsonb_agg(to_jsonb(r) order by r.requested_at desc) from private.admin_access_requests r),'[]'::jsonb);
+end;$$;
+create function public.review_admin_access(p_user_id uuid,p_approve boolean) returns void language plpgsql security definer set search_path='' as $$
+declare r private.admin_access_requests;mail text;confirmed text;
+begin
+ if not public.is_admin_access_owner() then raise exception 'Only the Circle owner can approve admin access' using errcode='42501';end if;
+ if p_approve is null then raise exception 'Choose approve or reject';end if;
+ select * into r from private.admin_access_requests where user_id=p_user_id for update;
+ if not found or r.status<>'pending' then raise exception 'This request is no longer pending. Refresh the list.';end if;
+ select lower(to_jsonb(u)->>'email'),to_jsonb(u)->>'email_confirmed_at' into mail,confirmed from auth.users u where id=p_user_id;
+ if mail is distinct from r.email or confirmed is null then raise exception 'The account email has changed or is not verified';end if;
+ if p_approve then insert into private.banner_admins(email) values(mail) on conflict(email) do nothing;end if;
+ update private.admin_access_requests set status=case when p_approve then 'approved' else 'rejected' end,reviewed_at=clock_timestamp(),reviewed_by=private.current_user_id() where user_id=p_user_id;
+end;$$;
+revoke all on function public.is_admin_access_owner(),public.request_admin_access(),public.admin_access_requests(),public.review_admin_access(uuid,boolean) from public,anon;
+grant execute on function public.is_admin_access_owner(),public.request_admin_access(),public.admin_access_requests(),public.review_admin_access(uuid,boolean) to authenticated;
+
+create or replace function public.admin_list_professionals(p_offset integer default 0,p_status text default 'all')
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ if p_offset is null or p_offset<0 or p_status is null or p_status not in ('all','pending','approved','rejected') then raise exception 'Invalid filter';end if;
+ return jsonb_build_object('total',(select count(*) from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id where (p.id is not null or a.professional_display_name is not null) and (p_status='all' or coalesce(r.status,'pending')=p_status)),
+ 'profiles',coalesce((select jsonb_agg(to_jsonb(t)) from (
+ select a.id,coalesce(p.display_name,a.professional_display_name) as display_name,a.full_name as original_name,p.category,p.city,a.created_at,coalesce(p.is_published,false) as is_published,coalesce(r.status,'pending') as review_status,r.reviewed_at,
+ (select storage_path from public.professional_photos where professional_id=a.id) as avatar_path,
+ (select min(amount_paise) from public.services where professional_id=a.id and active) as starting_price
+ from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id
+ where (p.id is not null or a.professional_display_name is not null) and (p_status='all' or coalesce(r.status,'pending')=p_status)
+ order by a.created_at desc,a.id limit 50 offset p_offset
+ ) t),'[]'::jsonb));
+end;$$;
+
+-- Expose connected-account status only, never Instagram identifiers or credentials.
+create or replace function public.admin_professional_profile(p_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501'; end if;
+ select jsonb_build_object('id',p.id,'original_name',(select full_name from public.profiles where id=p.id),'display_name',p.display_name,'category',p.category,'city',p.city,'bio',p.bio,'specialties',p.specialties,'public_specs',p.public_specs,'is_published',p.is_published,'available_now',p.available_now,'verified_at',p.verified_at,
+ 'review_status',coalesce(r.status,'pending'),'reviewed_at',r.reviewed_at,'note',coalesce(r.note,''),
+ 'instagram_connected',exists(select 1 from public.portfolio_connections c where c.professional_id=p.id and c.provider='instagram' and c.expires_at>now()),
+ 'avatar_path',(select storage_path from public.professional_photos where professional_id=p.id),
+ 'services',coalesce((select jsonb_agg(jsonb_build_object('name',s.name,'description',s.description,'amount_paise',s.amount_paise,'active',s.active) order by s.name) from public.services s where s.professional_id=p.id),'[]'::jsonb),
+ 'media',coalesce((select jsonb_agg(to_jsonb(m)) from (select id,kind,storage_path,position from public.portfolio_media where professional_id=p.id and provider='upload' and kind='image' order by position,updated_at desc limit 10) m),'[]'::jsonb),
+ 'reviews',coalesce((select jsonb_agg(to_jsonb(v)) from (select rating,comment,created_at from public.booking_reviews where professional_id=p.id order by created_at desc limit 20) v),'[]'::jsonb)) into result
+ from public.professionals p left join private.professional_reviews r on r.professional_id=p.id where p.id=p_id;
+ if result is null then
+  select jsonb_build_object('id',id,'display_name',professional_display_name,'original_name',full_name,'category','Profile incomplete','city','','bio','This professional has signed up but has not completed their professional details.','specialties','[]'::jsonb,'public_specs','{}'::jsonb,'review_status','pending','reviewed_at',null,'note','','incomplete',true,'services','[]'::jsonb,'media','[]'::jsonb,'reviews','[]'::jsonb)
+  into result from public.profiles where id=p_id and professional_display_name is not null;
+ end if;
+ if result is null then raise exception 'Professional not found'; end if;
+ return result;
+end;$$;
+
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610230004','admin_access_requests',array['create table private.admin_access_requests (
+ user_id uuid primary key references auth.users(id) on delete cascade,
+ email text not null, status text not null default ''pending'' check(status in (''pending'',''approved'',''rejected'')),
+ requested_at timestamptz not null default now(),reviewed_at timestamptz,reviewed_by uuid references auth.users(id) on delete set null
+);
+alter table private.admin_access_requests enable row level security;
+revoke all on private.admin_access_requests from public,anon,authenticated;
+grant all on private.admin_access_requests to service_role;
+create function public.is_admin_access_owner() returns boolean language sql stable security definer set search_path='''' as $$
+ select public.is_banner_admin() and exists(select 1 from auth.users u where u.id=private.current_user_id() and lower(to_jsonb(u)->>''email'')=''chetan.reddy@cclabs.space'' and to_jsonb(u)->>''email_confirmed_at'' is not null);
+$$;
+create function public.request_admin_access() returns text language plpgsql security definer set search_path='''' as $$
+declare who uuid:=private.current_user_id();mail text;confirmed text;state text;
+begin
+ select lower(to_jsonb(u)->>''email''),to_jsonb(u)->>''email_confirmed_at'' into mail,confirmed from auth.users u where id=who;
+ if who is null or mail is null or confirmed is null then raise exception ''Sign in with a verified email first'';end if;
+ if public.is_banner_admin() then return ''approved'';end if;
+ insert into private.admin_access_requests(user_id,email) values(who,mail) on conflict(user_id) do nothing;
+ select status into state from private.admin_access_requests where user_id=who;
+ return state;
+end;$$;
+create function public.admin_access_requests() returns jsonb language plpgsql stable security definer set search_path='''' as $$
+begin
+ if not public.is_admin_access_owner() then raise exception ''Only the Circle owner can review admin access'' using errcode=''42501'';end if;
+ return coalesce((select jsonb_agg(to_jsonb(r) order by r.requested_at desc) from private.admin_access_requests r),''[]''::jsonb);
+end;$$;
+create function public.review_admin_access(p_user_id uuid,p_approve boolean) returns void language plpgsql security definer set search_path='''' as $$
+declare r private.admin_access_requests;mail text;confirmed text;
+begin
+ if not public.is_admin_access_owner() then raise exception ''Only the Circle owner can approve admin access'' using errcode=''42501'';end if;
+ if p_approve is null then raise exception ''Choose approve or reject'';end if;
+ select * into r from private.admin_access_requests where user_id=p_user_id for update;
+ if not found or r.status<>''pending'' then raise exception ''This request is no longer pending. Refresh the list.'';end if;
+ select lower(to_jsonb(u)->>''email''),to_jsonb(u)->>''email_confirmed_at'' into mail,confirmed from auth.users u where id=p_user_id;
+ if mail is distinct from r.email or confirmed is null then raise exception ''The account email has changed or is not verified'';end if;
+ if p_approve then insert into private.banner_admins(email) values(mail) on conflict(email) do nothing;end if;
+ update private.admin_access_requests set status=case when p_approve then ''approved'' else ''rejected'' end,reviewed_at=clock_timestamp(),reviewed_by=private.current_user_id() where user_id=p_user_id;
+end;$$;
+revoke all on function public.is_admin_access_owner(),public.request_admin_access(),public.admin_access_requests(),public.review_admin_access(uuid,boolean) from public,anon;
+grant execute on function public.is_admin_access_owner(),public.request_admin_access(),public.admin_access_requests(),public.review_admin_access(uuid,boolean) to authenticated;
+
+create or replace function public.admin_list_professionals(p_offset integer default 0,p_status text default ''all'')
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ if p_offset is null or p_offset<0 or p_status is null or p_status not in (''all'',''pending'',''approved'',''rejected'') then raise exception ''Invalid filter'';end if;
+ return jsonb_build_object(''total'',(select count(*) from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id where (p.id is not null or a.professional_display_name is not null) and (p_status=''all'' or coalesce(r.status,''pending'')=p_status)),
+ ''profiles'',coalesce((select jsonb_agg(to_jsonb(t)) from (
+ select a.id,coalesce(p.display_name,a.professional_display_name) as display_name,a.full_name as original_name,p.category,p.city,a.created_at,coalesce(p.is_published,false) as is_published,coalesce(r.status,''pending'') as review_status,r.reviewed_at,
+ (select storage_path from public.professional_photos where professional_id=a.id) as avatar_path,
+ (select min(amount_paise) from public.services where professional_id=a.id and active) as starting_price
+ from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id
+ where (p.id is not null or a.professional_display_name is not null) and (p_status=''all'' or coalesce(r.status,''pending'')=p_status)
+ order by a.created_at desc,a.id limit 50 offset p_offset
+ ) t),''[]''::jsonb));
+end;$$;
+
+-- Expose connected-account status only, never Instagram identifiers or credentials.
+create or replace function public.admin_professional_profile(p_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501''; end if;
+ select jsonb_build_object(''id'',p.id,''original_name'',(select full_name from public.profiles where id=p.id),''display_name'',p.display_name,''category'',p.category,''city'',p.city,''bio'',p.bio,''specialties'',p.specialties,''public_specs'',p.public_specs,''is_published'',p.is_published,''available_now'',p.available_now,''verified_at'',p.verified_at,
+ ''review_status'',coalesce(r.status,''pending''),''reviewed_at'',r.reviewed_at,''note'',coalesce(r.note,''''),
+ ''instagram_connected'',exists(select 1 from public.portfolio_connections c where c.professional_id=p.id and c.provider=''instagram'' and c.expires_at>now()),
+ ''avatar_path'',(select storage_path from public.professional_photos where professional_id=p.id),
+ ''services'',coalesce((select jsonb_agg(jsonb_build_object(''name'',s.name,''description'',s.description,''amount_paise'',s.amount_paise,''active'',s.active) order by s.name) from public.services s where s.professional_id=p.id),''[]''::jsonb),
+ ''media'',coalesce((select jsonb_agg(to_jsonb(m)) from (select id,kind,storage_path,position from public.portfolio_media where professional_id=p.id and provider=''upload'' and kind=''image'' order by position,updated_at desc limit 10) m),''[]''::jsonb),
+ ''reviews'',coalesce((select jsonb_agg(to_jsonb(v)) from (select rating,comment,created_at from public.booking_reviews where professional_id=p.id order by created_at desc limit 20) v),''[]''::jsonb)) into result
+ from public.professionals p left join private.professional_reviews r on r.professional_id=p.id where p.id=p_id;
+ if result is null then
+  select jsonb_build_object(''id'',id,''display_name'',professional_display_name,''original_name'',full_name,''category'',''Profile incomplete'',''city'','''',''bio'',''This professional has signed up but has not completed their professional details.'',''specialties'',''[]''::jsonb,''public_specs'',''{}''::jsonb,''review_status'',''pending'',''reviewed_at'',null,''note'','''',''incomplete'',true,''services'',''[]''::jsonb,''media'',''[]''::jsonb,''reviews'',''[]''::jsonb)
+  into result from public.profiles where id=p_id and professional_display_name is not null;
+ end if;
+ if result is null then raise exception ''Professional not found''; end if;
+ return result;
+end;$$;
+
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610230005') then
+      raise exception 'Migration 202610230005 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+create function public.admin_user_directory(p_search text default '',p_kind text default 'all',p_offset integer default 0)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ if p_search is null or length(p_search)>120 or p_kind is null or p_kind not in ('all','customers','talent') or p_offset is null or p_offset<0 then raise exception 'Invalid user filter';end if;
+ with directory as (
+  select a.id,coalesce(nullif(a.full_name,''),nullif(a.display_name,''),'Circle user') as name,
+   coalesce(to_jsonb(u)->>'email',a.contact_email,'') as email,a.created_at,
+   (a.professional_display_name is not null or p.id is not null) as talent,
+   coalesce(p.display_name,a.professional_display_name,'') as username,
+   (select storage_path from public.professional_photos where professional_id=a.id) as avatar_path
+  from public.profiles a join auth.users u on u.id=a.id left join public.professionals p on p.id=a.id
+ ), filtered as (
+  select * from directory where (p_kind='all' or (p_kind='talent' and talent) or (p_kind='customers' and not talent))
+   and (name ilike '%'||trim(p_search)||'%' or email ilike '%'||trim(p_search)||'%' or username ilike '%'||trim(p_search)||'%')
+ ) select jsonb_build_object('total',(select count(*) from filtered),'users',coalesce((select jsonb_agg(to_jsonb(t)) from (select * from filtered order by created_at desc,id limit 50 offset p_offset)t),'[]'::jsonb)) into result;
+ return result;
+end;$$;
+create function public.admin_current_admins() returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if not public.is_admin_access_owner() then raise exception 'Only the Circle owner can view admin access' using errcode='42501';end if;
+ return coalesce((select jsonb_agg(jsonb_build_object('email',b.email,'name',coalesce(nullif(a.full_name,''),b.email),'owner',b.email='chetan.reddy@cclabs.space','created_at',b.created_at) order by b.created_at) from private.banner_admins b left join auth.users u on lower(to_jsonb(u)->>'email')=b.email left join public.profiles a on a.id=u.id),'[]'::jsonb);
+end;$$;
+revoke all on function public.admin_user_directory(text,text,integer),public.admin_current_admins() from public,anon;
+grant execute on function public.admin_user_directory(text,text,integer),public.admin_current_admins() to authenticated;
+
+create function public.admin_talent_directory(p_search text default '',p_status text default 'all',p_offset integer default 0)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ if p_search is null or length(p_search)>120 or p_status is null or p_status not in ('all','pending','approved','rejected') or p_offset is null or p_offset<0 then raise exception 'Invalid talent filter';end if;
+ with talent as (
+  select a.id,coalesce(p.display_name,a.professional_display_name) as display_name,a.full_name as original_name,p.category,p.city,a.created_at,coalesce(p.is_published,false) as is_published,coalesce(r.status,'pending') as review_status,r.reviewed_at,
+   (select storage_path from public.professional_photos where professional_id=a.id) as avatar_path,
+   (select min(amount_paise) from public.services where professional_id=a.id and active) as starting_price
+  from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id
+  where (p.id is not null or a.professional_display_name is not null) and (a.full_name ilike '%'||trim(p_search)||'%' or coalesce(p.display_name,a.professional_display_name) ilike '%'||trim(p_search)||'%' or p.city ilike '%'||trim(p_search)||'%')
+ ), filtered as (select * from talent where p_status='all' or review_status=p_status)
+ select jsonb_build_object('total',(select count(*) from filtered),'approved',(select count(*) from talent where review_status='approved'),'pending',(select count(*) from talent where review_status='pending'),
+ 'profiles',coalesce((select jsonb_agg(to_jsonb(t)) from (select * from filtered order by created_at desc,id limit 50 offset p_offset)t),'[]'::jsonb)) into result;
+ return result;
+end;$$;
+revoke all on function public.admin_talent_directory(text,text,integer) from public,anon;
+grant execute on function public.admin_talent_directory(text,text,integer) to authenticated;
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610230005','admin_directory',array['create function public.admin_user_directory(p_search text default '''',p_kind text default ''all'',p_offset integer default 0)
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ if p_search is null or length(p_search)>120 or p_kind is null or p_kind not in (''all'',''customers'',''talent'') or p_offset is null or p_offset<0 then raise exception ''Invalid user filter'';end if;
+ with directory as (
+  select a.id,coalesce(nullif(a.full_name,''''),nullif(a.display_name,''''),''Circle user'') as name,
+   coalesce(to_jsonb(u)->>''email'',a.contact_email,'''') as email,a.created_at,
+   (a.professional_display_name is not null or p.id is not null) as talent,
+   coalesce(p.display_name,a.professional_display_name,'''') as username,
+   (select storage_path from public.professional_photos where professional_id=a.id) as avatar_path
+  from public.profiles a join auth.users u on u.id=a.id left join public.professionals p on p.id=a.id
+ ), filtered as (
+  select * from directory where (p_kind=''all'' or (p_kind=''talent'' and talent) or (p_kind=''customers'' and not talent))
+   and (name ilike ''%''||trim(p_search)||''%'' or email ilike ''%''||trim(p_search)||''%'' or username ilike ''%''||trim(p_search)||''%'')
+ ) select jsonb_build_object(''total'',(select count(*) from filtered),''users'',coalesce((select jsonb_agg(to_jsonb(t)) from (select * from filtered order by created_at desc,id limit 50 offset p_offset)t),''[]''::jsonb)) into result;
+ return result;
+end;$$;
+create function public.admin_current_admins() returns jsonb language plpgsql stable security definer set search_path='''' as $$
+begin
+ if not public.is_admin_access_owner() then raise exception ''Only the Circle owner can view admin access'' using errcode=''42501'';end if;
+ return coalesce((select jsonb_agg(jsonb_build_object(''email'',b.email,''name'',coalesce(nullif(a.full_name,''''),b.email),''owner'',b.email=''chetan.reddy@cclabs.space'',''created_at'',b.created_at) order by b.created_at) from private.banner_admins b left join auth.users u on lower(to_jsonb(u)->>''email'')=b.email left join public.profiles a on a.id=u.id),''[]''::jsonb);
+end;$$;
+revoke all on function public.admin_user_directory(text,text,integer),public.admin_current_admins() from public,anon;
+grant execute on function public.admin_user_directory(text,text,integer),public.admin_current_admins() to authenticated;
+
+create function public.admin_talent_directory(p_search text default '''',p_status text default ''all'',p_offset integer default 0)
+returns jsonb language plpgsql stable security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ if p_search is null or length(p_search)>120 or p_status is null or p_status not in (''all'',''pending'',''approved'',''rejected'') or p_offset is null or p_offset<0 then raise exception ''Invalid talent filter'';end if;
+ with talent as (
+  select a.id,coalesce(p.display_name,a.professional_display_name) as display_name,a.full_name as original_name,p.category,p.city,a.created_at,coalesce(p.is_published,false) as is_published,coalesce(r.status,''pending'') as review_status,r.reviewed_at,
+   (select storage_path from public.professional_photos where professional_id=a.id) as avatar_path,
+   (select min(amount_paise) from public.services where professional_id=a.id and active) as starting_price
+  from public.profiles a left join public.professionals p on p.id=a.id left join private.professional_reviews r on r.professional_id=a.id
+  where (p.id is not null or a.professional_display_name is not null) and (a.full_name ilike ''%''||trim(p_search)||''%'' or coalesce(p.display_name,a.professional_display_name) ilike ''%''||trim(p_search)||''%'' or p.city ilike ''%''||trim(p_search)||''%'')
+ ), filtered as (select * from talent where p_status=''all'' or review_status=p_status)
+ select jsonb_build_object(''total'',(select count(*) from filtered),''approved'',(select count(*) from talent where review_status=''approved''),''pending'',(select count(*) from talent where review_status=''pending''),
+ ''profiles'',coalesce((select jsonb_agg(to_jsonb(t)) from (select * from filtered order by created_at desc,id limit 50 offset p_offset)t),''[]''::jsonb)) into result;
+ return result;
+end;$$;
+revoke all on function public.admin_talent_directory(text,text,integer) from public,anon;
+grant execute on function public.admin_talent_directory(text,text,integer) to authenticated;
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610230006') then
+      raise exception 'Migration 202610230006 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Return only whether the current verified account has a password, never its hash.
+create function public.my_password_setup_status() returns boolean
+language plpgsql stable security definer set search_path='' as $$
+declare who uuid:=private.current_user_id(); result boolean;
+begin
+ if who is null then raise exception 'Sign in first' using errcode='42501';end if;
+ select coalesce(nullif(to_jsonb(u)->>'encrypted_password',''),'')<>'' into result
+ from auth.users u where u.id=who and to_jsonb(u)->>'email_confirmed_at' is not null;
+ if result is null then raise exception 'Verify your email first' using errcode='42501';end if;
+ return result;
+end;$$;
+revoke all on function public.my_password_setup_status() from public,anon;
+grant execute on function public.my_password_setup_status() to authenticated;
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610230006','password_setup_status',array['-- Return only whether the current verified account has a password, never its hash.
+create function public.my_password_setup_status() returns boolean
+language plpgsql stable security definer set search_path='''' as $$
+declare who uuid:=private.current_user_id(); result boolean;
+begin
+ if who is null then raise exception ''Sign in first'' using errcode=''42501'';end if;
+ select coalesce(nullif(to_jsonb(u)->>''encrypted_password'',''''),'''')<>'''' into result
+ from auth.users u where u.id=who and to_jsonb(u)->>''email_confirmed_at'' is not null;
+ if result is null then raise exception ''Verify your email first'' using errcode=''42501'';end if;
+ return result;
+end;$$;
+revoke all on function public.my_password_setup_status() from public,anon;
+grant execute on function public.my_password_setup_status() to authenticated;
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610300001') then
+      raise exception 'Migration 202610300001 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Public marketing images only; private professional portfolios are unaffected.
+create table public.service_artwork (
+ service_key text primary key references public.service_types(key),
+ image_path text not null unique check(image_path ~ '^[a-f0-9-]{36}/[a-f0-9-]{36}\.jpg$'),
+ image_width integer not null check(image_width between 320 and 2048),
+ image_height integer not null check(image_height between 320 and 2048),
+ updated_at timestamptz not null default now(),
+ updated_by uuid references auth.users(id) on delete set null
+);
+alter table public.service_artwork enable row level security;
+revoke all on public.service_artwork from public,anon,authenticated;
+grant select(service_key,image_path,image_width,image_height,updated_at) on public.service_artwork to anon,authenticated;
+grant insert,update,delete on public.service_artwork to authenticated;
+grant all on public.service_artwork to service_role;
+create policy service_artwork_read on public.service_artwork for select to anon,authenticated using(true);
+create policy service_artwork_insert on public.service_artwork for insert to authenticated with check(public.is_banner_admin());
+create policy service_artwork_update on public.service_artwork for update to authenticated using(public.is_banner_admin()) with check(public.is_banner_admin());
+create policy service_artwork_reset on public.service_artwork for delete to authenticated using(public.is_banner_admin());
+create function private.validate_service_artwork() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if not exists(select 1 from storage.objects where bucket_id='service-artwork' and name=new.image_path) then
+  raise exception 'Upload the service photo before publishing';
+ end if;
+ if (tg_op='INSERT' or new.image_path is distinct from old.image_path) and split_part(new.image_path,'/',1) is distinct from auth.uid()::text then
+  raise exception 'Choose your newly uploaded service photo';
+ end if;
+ new.updated_at:=clock_timestamp();new.updated_by:=auth.uid();return new;
+end;$$;
+revoke all on function private.validate_service_artwork() from public,anon,authenticated;
+create trigger validate_service_artwork before insert or update on public.service_artwork for each row execute function private.validate_service_artwork();
+do $storage$ begin
+if to_regclass('storage.buckets') is not null and to_regclass('storage.objects') is not null then
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+ values('service-artwork','service-artwork',true,5242880,array['image/jpeg']);
+create policy service_artwork_upload on storage.objects for insert to authenticated with check(
+ bucket_id='service-artwork' and public.is_banner_admin() and split_part(name,'/',1)=auth.uid()::text
+ and name ~ '^[a-f0-9-]{36}/[a-f0-9-]{36}\.jpg$');
+create policy service_artwork_objects on storage.objects for select to authenticated using(bucket_id='service-artwork' and public.is_banner_admin());
+create policy service_artwork_cleanup on storage.objects for delete to authenticated using(
+ bucket_id='service-artwork' and public.is_banner_admin() and split_part(name,'/',1)=auth.uid()::text
+ and not exists(select 1 from public.service_artwork a where a.image_path=name));
+end if;
+end $storage$;
+notify pgrst,'reload schema';
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610300001','service_artwork',array['-- Public marketing images only; private professional portfolios are unaffected.
+create table public.service_artwork (
+ service_key text primary key references public.service_types(key),
+ image_path text not null unique check(image_path ~ ''^[a-f0-9-]{36}/[a-f0-9-]{36}\.jpg$''),
+ image_width integer not null check(image_width between 320 and 2048),
+ image_height integer not null check(image_height between 320 and 2048),
+ updated_at timestamptz not null default now(),
+ updated_by uuid references auth.users(id) on delete set null
+);
+alter table public.service_artwork enable row level security;
+revoke all on public.service_artwork from public,anon,authenticated;
+grant select(service_key,image_path,image_width,image_height,updated_at) on public.service_artwork to anon,authenticated;
+grant insert,update,delete on public.service_artwork to authenticated;
+grant all on public.service_artwork to service_role;
+create policy service_artwork_read on public.service_artwork for select to anon,authenticated using(true);
+create policy service_artwork_insert on public.service_artwork for insert to authenticated with check(public.is_banner_admin());
+create policy service_artwork_update on public.service_artwork for update to authenticated using(public.is_banner_admin()) with check(public.is_banner_admin());
+create policy service_artwork_reset on public.service_artwork for delete to authenticated using(public.is_banner_admin());
+create function private.validate_service_artwork() returns trigger language plpgsql security definer set search_path='''' as $$
+begin
+ if not exists(select 1 from storage.objects where bucket_id=''service-artwork'' and name=new.image_path) then
+  raise exception ''Upload the service photo before publishing'';
+ end if;
+ if (tg_op=''INSERT'' or new.image_path is distinct from old.image_path) and split_part(new.image_path,''/'',1) is distinct from auth.uid()::text then
+  raise exception ''Choose your newly uploaded service photo'';
+ end if;
+ new.updated_at:=clock_timestamp();new.updated_by:=auth.uid();return new;
+end;$$;
+revoke all on function private.validate_service_artwork() from public,anon,authenticated;
+create trigger validate_service_artwork before insert or update on public.service_artwork for each row execute function private.validate_service_artwork();
+do $storage$ begin
+if to_regclass(''storage.buckets'') is not null and to_regclass(''storage.objects'') is not null then
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+ values(''service-artwork'',''service-artwork'',true,5242880,array[''image/jpeg'']);
+create policy service_artwork_upload on storage.objects for insert to authenticated with check(
+ bucket_id=''service-artwork'' and public.is_banner_admin() and split_part(name,''/'',1)=auth.uid()::text
+ and name ~ ''^[a-f0-9-]{36}/[a-f0-9-]{36}\.jpg$'');
+create policy service_artwork_objects on storage.objects for select to authenticated using(bucket_id=''service-artwork'' and public.is_banner_admin());
+create policy service_artwork_cleanup on storage.objects for delete to authenticated using(
+ bucket_id=''service-artwork'' and public.is_banner_admin() and split_part(name,''/'',1)=auth.uid()::text
+ and not exists(select 1 from public.service_artwork a where a.image_path=name));
+end if;
+end $storage$;
+notify pgrst,''reload schema'';
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610300002') then
+      raise exception 'Migration 202610300002 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Rename public catalog labels; stable keys preserve existing services and bookings.
+grant update(label) on public.service_types to authenticated;
+create policy service_name_admin_update on public.service_types for update to authenticated using(public.is_banner_admin()) with check(public.is_banner_admin());
+alter table public.service_types add constraint service_label_length check(length(trim(label)) between 2 and 80);
+create unique index service_type_label_unique on public.service_types(category,lower(trim(label)));
+grant select(key,label) on public.service_types to anon;
+create policy public_service_names on public.service_types for select to anon,authenticated using(true);
+notify pgrst,'reload schema';
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610300002','service_names',array['-- Rename public catalog labels; stable keys preserve existing services and bookings.
+grant update(label) on public.service_types to authenticated;
+create policy service_name_admin_update on public.service_types for update to authenticated using(public.is_banner_admin()) with check(public.is_banner_admin());
+alter table public.service_types add constraint service_label_length check(length(trim(label)) between 2 and 80);
+create unique index service_type_label_unique on public.service_types(category,lower(trim(label)));
+grant select(key,label) on public.service_types to anon;
+create policy public_service_names on public.service_types for select to anon,authenticated using(true);
+notify pgrst,''reload schema'';
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610300003') then
+      raise exception 'Migration 202610300003 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+alter table public.home_campaigns add column featured_heading text not null default 'Festive picks'
+ check(length(trim(featured_heading)) between 1 and 60);
+notify pgrst,'reload schema';
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610300003','banner_picks_heading',array['alter table public.home_campaigns add column featured_heading text not null default ''Festive picks''
+ check(length(trim(featured_heading)) between 1 and 60);
+notify pgrst,''reload schema'';
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610300004') then
+      raise exception 'Migration 202610300004 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Optional customer marketing; transactional notifications retain their existing rules.
+alter table private.notification_preferences add column promotions_enabled boolean not null default false;
+create table private.promotion_settings (
+ id boolean primary key default true check(id), enabled boolean not null default false,
+ daily_count integer not null default 3 check(daily_count between 1 and 3),
+ updated_at timestamptz not null default now()
+);
+insert into private.promotion_settings(id) values(true);
+create table private.promotion_templates (
+ slot integer primary key check(slot between 1 and 5),
+ body text not null check(length(trim(body)) between 1 and 160)
+);
+create table private.promotion_schedule (
+ user_id uuid not null references public.profiles on delete cascade,
+ local_day date not null, slot integer not null check(slot between 1 and 3),
+ template_slot integer not null references private.promotion_templates(slot),
+ scheduled_at timestamptz not null, notified_at timestamptz,
+ primary key(user_id,local_day,slot),unique(user_id,local_day,template_slot)
+);
+create index promotion_due on private.promotion_schedule(local_day,scheduled_at) where notified_at is null;
+alter table private.promotion_settings enable row level security;
+alter table private.promotion_templates enable row level security;
+alter table private.promotion_schedule enable row level security;
+revoke all on private.promotion_settings,private.promotion_templates,private.promotion_schedule from public,anon,authenticated;
+create function public.admin_promotion_settings() returns jsonb language plpgsql security definer set search_path='' as $$
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required';end if;
+ return (select jsonb_build_object('enabled',s.enabled,'daily_count',s.daily_count,'updated_at',s.updated_at,
+ 'messages',(select coalesce(jsonb_agg(jsonb_build_object('slot',t.slot,'body',t.body) order by t.slot),'[]'::jsonb) from private.promotion_templates t)) from private.promotion_settings s where id);
+end;$$;
+create function public.save_promotion_settings(p_messages text[],p_enabled boolean,p_daily_count integer,p_expected_at timestamptz) returns jsonb language plpgsql security definer set search_path='' as $$
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required';end if;
+ if cardinality(p_messages) is distinct from 5 or p_enabled is null or p_daily_count is null or p_daily_count not between 1 and 3 or
+ exists(select 1 from unnest(p_messages) m where m is null or length(trim(m)) not between 1 and 160) or
+ (select count(distinct lower(trim(m))) from unnest(p_messages) m)<>5 then raise exception 'Add five different messages of 1–160 characters and choose 1–3 daily sends';end if;
+ perform 1 from private.promotion_settings where id for update;
+ if p_expected_at is null or not exists(select 1 from private.promotion_settings where id and updated_at=p_expected_at) then raise exception 'Another admin changed promotions. Refresh and try again';end if;
+ insert into private.promotion_templates(slot,body) select i,trim(p_messages[i]) from generate_series(1,5) i on conflict(slot) do update set body=excluded.body;
+ update private.promotion_settings set enabled=p_enabled,daily_count=p_daily_count,updated_at=clock_timestamp() where id;
+ return public.admin_promotion_settings();
+end;$$;
+revoke all on function public.admin_promotion_settings(),public.save_promotion_settings(text[],boolean,integer,timestamptz) from public,anon;
+grant execute on function public.admin_promotion_settings(),public.save_promotion_settings(text[],boolean,integer,timestamptz) to authenticated;
+
+create or replace function public.notification_settings(p_variant text,p_settings jsonb default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb;
+begin
+ if auth.uid() is null or p_variant not in ('customer','professional') then raise exception 'Sign in to manage notifications';end if;
+ insert into private.notification_preferences(user_id,app_variant) values(auth.uid(),p_variant) on conflict do nothing;
+ if p_settings is not null then update private.notification_preferences set
+ push_enabled=coalesce((p_settings->>'push_enabled')::boolean,push_enabled),
+ messages_enabled=coalesce((p_settings->>'messages_enabled')::boolean,messages_enabled),
+ events_enabled=coalesce((p_settings->>'events_enabled')::boolean,events_enabled),
+ promotions_enabled=case when p_variant='customer' then coalesce((p_settings->>'promotions_enabled')::boolean,promotions_enabled) else false end
+ where user_id=auth.uid() and app_variant=p_variant;end if;
+ select jsonb_build_object('push_enabled',push_enabled,'messages_enabled',messages_enabled,'events_enabled',events_enabled,'promotions_enabled',promotions_enabled)
+ into result from private.notification_preferences where user_id=auth.uid() and app_variant=p_variant;return result;
+end;$$;
+
+create function public.queue_daily_promotions(p_now timestamptz default now()) returns integer language plpgsql security definer set search_path='' as $$
+declare settings private.promotion_settings;u record;due record;choices integer[];day date;window_start timestamptz;slot integer;queued integer:=0;
+begin
+ perform pg_advisory_xact_lock(830103004);
+ select * into settings from private.promotion_settings where id;
+ if not settings.enabled or (select count(*) from private.promotion_templates)<>5 then return 0;end if;
+ day:=(p_now at time zone 'Asia/Kolkata')::date;
+ delete from private.promotion_schedule where local_day<day-35;
+ -- Plan each account/day once. New installs never catch up expired windows.
+ for u in select p.user_id from private.notification_preferences p where p.app_variant='customer' and p.push_enabled and p.promotions_enabled
+ and exists(select 1 from private.notification_devices d where d.user_id=p.user_id and d.app_variant='customer' and d.updated_at>p_now-interval '60 days')
+ and not exists(select 1 from private.promotion_schedule s where s.user_id=p.user_id and s.local_day=day) limit 500 loop
+  select array_agg(t.slot) into choices from (select t.slot from private.promotion_templates t order by random() limit 3) t;
+  for slot in 1..3 loop
+   window_start:=(day::timestamp+make_interval(hours=>case slot when 1 then 10 when 2 then 14 else 18 end)) at time zone 'Asia/Kolkata';
+   insert into private.promotion_schedule(user_id,local_day,slot,template_slot,scheduled_at)
+    values(u.user_id,day,slot,choices[slot],window_start+random()*interval '2 hours') on conflict do nothing;
+  end loop;
+ end loop;
+ for due in select s.*,t.body from private.promotion_schedule s join private.promotion_templates t on t.slot=s.template_slot
+ join private.notification_preferences p on p.user_id=s.user_id and p.app_variant='customer'
+ where s.local_day=day and s.slot<=settings.daily_count and s.notified_at is null and s.scheduled_at<=p_now and s.scheduled_at>p_now-interval '45 minutes'
+ and p.push_enabled and p.promotions_enabled
+ and exists(select 1 from private.notification_devices d where d.user_id=s.user_id and d.app_variant='customer' and d.updated_at>p_now-interval '60 days')
+ order by s.scheduled_at limit 500 loop
+  perform private.notify_circle(due.user_id,'customer','promotion','Artist House',due.body,'promotion:'||day::text||':'||due.slot::text);
+  update private.promotion_schedule s set notified_at=p_now where s.user_id=due.user_id and s.local_day=due.local_day and s.slot=due.slot;
+  queued:=queued+1;
+ end loop;
+ return queued;
+end;$$;
+revoke all on function public.queue_daily_promotions(timestamptz) from public,anon,authenticated;
+grant execute on function public.queue_daily_promotions(timestamptz) to service_role;
+
+-- Old, paused, edited-away or opted-out marketing is suppressed even after claim.
+create function private.promotion_delivery_allowed(p_note public.app_notifications) returns boolean language sql stable security definer set search_path='' as $$
+ select p_note.kind<>'promotion' or (
+ p_note.app_variant='customer' and p_note.created_at>now()-interval '45 minutes'
+ and exists(select 1 from private.notification_preferences p where p.user_id=p_note.user_id and p.app_variant='customer' and p.promotions_enabled)
+ and exists(select 1 from private.promotion_settings s join private.promotion_schedule d on d.user_id=p_note.user_id
+ and p_note.dedupe_key='promotion:'||d.local_day::text||':'||d.slot::text
+ join private.promotion_templates t on t.slot=d.template_slot where s.id and s.enabled and d.slot<=s.daily_count and t.body=p_note.body)
+ );
+$$;
+revoke all on function private.promotion_delivery_allowed(public.app_notifications) from public,anon,authenticated;
+
+create or replace function public.notification_delivery_current(p_id uuid,p_attempt integer) returns boolean language sql stable security definer set search_path='' as $$
+ select exists(select 1 from private.notification_deliveries j
+ join private.notification_devices d on d.id=j.device_id join public.app_notifications n on n.id=j.notification_id
+ join private.notification_preferences p on p.user_id=d.user_id and p.app_variant=d.app_variant left join public.bookings b on b.id=n.booking_id
+ where j.id=p_id and j.attempts=p_attempt and j.state='sending' and j.lease_until>now()
+ and n.user_id=d.user_id and n.app_variant=d.app_variant and n.read_at is null and n.created_at>now()-interval '1 day' and p.push_enabled
+ and (n.kind<>'message' or p.messages_enabled) and (n.kind not like 'event%' or p.events_enabled)
+ and (n.dedupe_key not like 'request:%' or b.status='requested')
+ and (n.dedupe_key not like 'status:%' or n.dedupe_key='status:'||b.id||':'||b.status)
+ and (n.kind<>'reminder' or (b.status='accepted' and b.starts_at>now())) and (n.kind<>'service' or b.service_ended_at is null)
+ and private.promotion_delivery_allowed(n));
+$$;
+
+create or replace function public.claim_notification_deliveries_for_providers(p_providers text[]) returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb;
+begin
+ delete from public.app_notifications where created_at<now()-interval '30 days';
+ update private.notification_deliveries j set state='failed' where j.state in ('pending','sending') and (j.attempts>=5 or not exists(
+ select 1 from public.app_notifications n join private.notification_devices d on d.id=j.device_id
+ left join private.notification_preferences p on p.user_id=d.user_id and p.app_variant=d.app_variant
+ where n.id=j.notification_id and n.user_id=d.user_id and n.app_variant=d.app_variant and n.created_at>now()-interval '1 day'
+ and n.read_at is null and coalesce(p.push_enabled,false) and (n.kind<>'message' or coalesce(p.messages_enabled,true))
+ and (n.kind not like 'event%' or coalesce(p.events_enabled,true)) and private.promotion_delivery_allowed(n)));
+ with picked as (select j.id from private.notification_deliveries j join private.notification_devices d on d.id=j.device_id join public.app_notifications n on n.id=j.notification_id
+ where d.provider=any(p_providers) and ((j.state='pending' and j.next_attempt_at<=now()) or (j.state='sending' and j.lease_until<now()))
+ order by (n.kind='promotion'),j.next_attempt_at for update of j skip locked limit 50), claimed as (
+ update private.notification_deliveries j set state='sending',attempts=attempts+1,lease_until=now()+interval '2 minutes' from picked where j.id=picked.id returning j.*)
+ select coalesce(jsonb_agg(jsonb_build_object('id',j.id,'attempt',j.attempts,'token',d.token,'notification_id',n.id,'variant',n.app_variant,'title',n.title,
+ 'promotion_body',case when n.kind='promotion' then n.body else null end,'provider',d.provider,'environment',d.apns_environment)),'[]'::jsonb)
+ into result from claimed j join private.notification_devices d on d.id=j.device_id join public.app_notifications n on n.id=j.notification_id;return result;
+end;$$;
+notify pgrst,'reload schema';
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610300004','daily_promotions',array['-- Optional customer marketing; transactional notifications retain their existing rules.
+alter table private.notification_preferences add column promotions_enabled boolean not null default false;
+create table private.promotion_settings (
+ id boolean primary key default true check(id), enabled boolean not null default false,
+ daily_count integer not null default 3 check(daily_count between 1 and 3),
+ updated_at timestamptz not null default now()
+);
+insert into private.promotion_settings(id) values(true);
+create table private.promotion_templates (
+ slot integer primary key check(slot between 1 and 5),
+ body text not null check(length(trim(body)) between 1 and 160)
+);
+create table private.promotion_schedule (
+ user_id uuid not null references public.profiles on delete cascade,
+ local_day date not null, slot integer not null check(slot between 1 and 3),
+ template_slot integer not null references private.promotion_templates(slot),
+ scheduled_at timestamptz not null, notified_at timestamptz,
+ primary key(user_id,local_day,slot),unique(user_id,local_day,template_slot)
+);
+create index promotion_due on private.promotion_schedule(local_day,scheduled_at) where notified_at is null;
+alter table private.promotion_settings enable row level security;
+alter table private.promotion_templates enable row level security;
+alter table private.promotion_schedule enable row level security;
+revoke all on private.promotion_settings,private.promotion_templates,private.promotion_schedule from public,anon,authenticated;
+create function public.admin_promotion_settings() returns jsonb language plpgsql security definer set search_path='''' as $$
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'';end if;
+ return (select jsonb_build_object(''enabled'',s.enabled,''daily_count'',s.daily_count,''updated_at'',s.updated_at,
+ ''messages'',(select coalesce(jsonb_agg(jsonb_build_object(''slot'',t.slot,''body'',t.body) order by t.slot),''[]''::jsonb) from private.promotion_templates t)) from private.promotion_settings s where id);
+end;$$;
+create function public.save_promotion_settings(p_messages text[],p_enabled boolean,p_daily_count integer,p_expected_at timestamptz) returns jsonb language plpgsql security definer set search_path='''' as $$
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'';end if;
+ if cardinality(p_messages) is distinct from 5 or p_enabled is null or p_daily_count is null or p_daily_count not between 1 and 3 or
+ exists(select 1 from unnest(p_messages) m where m is null or length(trim(m)) not between 1 and 160) or
+ (select count(distinct lower(trim(m))) from unnest(p_messages) m)<>5 then raise exception ''Add five different messages of 1–160 characters and choose 1–3 daily sends'';end if;
+ perform 1 from private.promotion_settings where id for update;
+ if p_expected_at is null or not exists(select 1 from private.promotion_settings where id and updated_at=p_expected_at) then raise exception ''Another admin changed promotions. Refresh and try again'';end if;
+ insert into private.promotion_templates(slot,body) select i,trim(p_messages[i]) from generate_series(1,5) i on conflict(slot) do update set body=excluded.body;
+ update private.promotion_settings set enabled=p_enabled,daily_count=p_daily_count,updated_at=clock_timestamp() where id;
+ return public.admin_promotion_settings();
+end;$$;
+revoke all on function public.admin_promotion_settings(),public.save_promotion_settings(text[],boolean,integer,timestamptz) from public,anon;
+grant execute on function public.admin_promotion_settings(),public.save_promotion_settings(text[],boolean,integer,timestamptz) to authenticated;
+
+create or replace function public.notification_settings(p_variant text,p_settings jsonb default null) returns jsonb language plpgsql security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ if auth.uid() is null or p_variant not in (''customer'',''professional'') then raise exception ''Sign in to manage notifications'';end if;
+ insert into private.notification_preferences(user_id,app_variant) values(auth.uid(),p_variant) on conflict do nothing;
+ if p_settings is not null then update private.notification_preferences set
+ push_enabled=coalesce((p_settings->>''push_enabled'')::boolean,push_enabled),
+ messages_enabled=coalesce((p_settings->>''messages_enabled'')::boolean,messages_enabled),
+ events_enabled=coalesce((p_settings->>''events_enabled'')::boolean,events_enabled),
+ promotions_enabled=case when p_variant=''customer'' then coalesce((p_settings->>''promotions_enabled'')::boolean,promotions_enabled) else false end
+ where user_id=auth.uid() and app_variant=p_variant;end if;
+ select jsonb_build_object(''push_enabled'',push_enabled,''messages_enabled'',messages_enabled,''events_enabled'',events_enabled,''promotions_enabled'',promotions_enabled)
+ into result from private.notification_preferences where user_id=auth.uid() and app_variant=p_variant;return result;
+end;$$;
+
+create function public.queue_daily_promotions(p_now timestamptz default now()) returns integer language plpgsql security definer set search_path='''' as $$
+declare settings private.promotion_settings;u record;due record;choices integer[];day date;window_start timestamptz;slot integer;queued integer:=0;
+begin
+ perform pg_advisory_xact_lock(830103004);
+ select * into settings from private.promotion_settings where id;
+ if not settings.enabled or (select count(*) from private.promotion_templates)<>5 then return 0;end if;
+ day:=(p_now at time zone ''Asia/Kolkata'')::date;
+ delete from private.promotion_schedule where local_day<day-35;
+ -- Plan each account/day once. New installs never catch up expired windows.
+ for u in select p.user_id from private.notification_preferences p where p.app_variant=''customer'' and p.push_enabled and p.promotions_enabled
+ and exists(select 1 from private.notification_devices d where d.user_id=p.user_id and d.app_variant=''customer'' and d.updated_at>p_now-interval ''60 days'')
+ and not exists(select 1 from private.promotion_schedule s where s.user_id=p.user_id and s.local_day=day) limit 500 loop
+  select array_agg(t.slot) into choices from (select t.slot from private.promotion_templates t order by random() limit 3) t;
+  for slot in 1..3 loop
+   window_start:=(day::timestamp+make_interval(hours=>case slot when 1 then 10 when 2 then 14 else 18 end)) at time zone ''Asia/Kolkata'';
+   insert into private.promotion_schedule(user_id,local_day,slot,template_slot,scheduled_at)
+    values(u.user_id,day,slot,choices[slot],window_start+random()*interval ''2 hours'') on conflict do nothing;
+  end loop;
+ end loop;
+ for due in select s.*,t.body from private.promotion_schedule s join private.promotion_templates t on t.slot=s.template_slot
+ join private.notification_preferences p on p.user_id=s.user_id and p.app_variant=''customer''
+ where s.local_day=day and s.slot<=settings.daily_count and s.notified_at is null and s.scheduled_at<=p_now and s.scheduled_at>p_now-interval ''45 minutes''
+ and p.push_enabled and p.promotions_enabled
+ and exists(select 1 from private.notification_devices d where d.user_id=s.user_id and d.app_variant=''customer'' and d.updated_at>p_now-interval ''60 days'')
+ order by s.scheduled_at limit 500 loop
+  perform private.notify_circle(due.user_id,''customer'',''promotion'',''Artist House'',due.body,''promotion:''||day::text||'':''||due.slot::text);
+  update private.promotion_schedule s set notified_at=p_now where s.user_id=due.user_id and s.local_day=due.local_day and s.slot=due.slot;
+  queued:=queued+1;
+ end loop;
+ return queued;
+end;$$;
+revoke all on function public.queue_daily_promotions(timestamptz) from public,anon,authenticated;
+grant execute on function public.queue_daily_promotions(timestamptz) to service_role;
+
+-- Old, paused, edited-away or opted-out marketing is suppressed even after claim.
+create function private.promotion_delivery_allowed(p_note public.app_notifications) returns boolean language sql stable security definer set search_path='''' as $$
+ select p_note.kind<>''promotion'' or (
+ p_note.app_variant=''customer'' and p_note.created_at>now()-interval ''45 minutes''
+ and exists(select 1 from private.notification_preferences p where p.user_id=p_note.user_id and p.app_variant=''customer'' and p.promotions_enabled)
+ and exists(select 1 from private.promotion_settings s join private.promotion_schedule d on d.user_id=p_note.user_id
+ and p_note.dedupe_key=''promotion:''||d.local_day::text||'':''||d.slot::text
+ join private.promotion_templates t on t.slot=d.template_slot where s.id and s.enabled and d.slot<=s.daily_count and t.body=p_note.body)
+ );
+$$;
+revoke all on function private.promotion_delivery_allowed(public.app_notifications) from public,anon,authenticated;
+
+create or replace function public.notification_delivery_current(p_id uuid,p_attempt integer) returns boolean language sql stable security definer set search_path='''' as $$
+ select exists(select 1 from private.notification_deliveries j
+ join private.notification_devices d on d.id=j.device_id join public.app_notifications n on n.id=j.notification_id
+ join private.notification_preferences p on p.user_id=d.user_id and p.app_variant=d.app_variant left join public.bookings b on b.id=n.booking_id
+ where j.id=p_id and j.attempts=p_attempt and j.state=''sending'' and j.lease_until>now()
+ and n.user_id=d.user_id and n.app_variant=d.app_variant and n.read_at is null and n.created_at>now()-interval ''1 day'' and p.push_enabled
+ and (n.kind<>''message'' or p.messages_enabled) and (n.kind not like ''event%'' or p.events_enabled)
+ and (n.dedupe_key not like ''request:%'' or b.status=''requested'')
+ and (n.dedupe_key not like ''status:%'' or n.dedupe_key=''status:''||b.id||'':''||b.status)
+ and (n.kind<>''reminder'' or (b.status=''accepted'' and b.starts_at>now())) and (n.kind<>''service'' or b.service_ended_at is null)
+ and private.promotion_delivery_allowed(n));
+$$;
+
+create or replace function public.claim_notification_deliveries_for_providers(p_providers text[]) returns jsonb language plpgsql security definer set search_path='''' as $$
+declare result jsonb;
+begin
+ delete from public.app_notifications where created_at<now()-interval ''30 days'';
+ update private.notification_deliveries j set state=''failed'' where j.state in (''pending'',''sending'') and (j.attempts>=5 or not exists(
+ select 1 from public.app_notifications n join private.notification_devices d on d.id=j.device_id
+ left join private.notification_preferences p on p.user_id=d.user_id and p.app_variant=d.app_variant
+ where n.id=j.notification_id and n.user_id=d.user_id and n.app_variant=d.app_variant and n.created_at>now()-interval ''1 day''
+ and n.read_at is null and coalesce(p.push_enabled,false) and (n.kind<>''message'' or coalesce(p.messages_enabled,true))
+ and (n.kind not like ''event%'' or coalesce(p.events_enabled,true)) and private.promotion_delivery_allowed(n)));
+ with picked as (select j.id from private.notification_deliveries j join private.notification_devices d on d.id=j.device_id join public.app_notifications n on n.id=j.notification_id
+ where d.provider=any(p_providers) and ((j.state=''pending'' and j.next_attempt_at<=now()) or (j.state=''sending'' and j.lease_until<now()))
+ order by (n.kind=''promotion''),j.next_attempt_at for update of j skip locked limit 50), claimed as (
+ update private.notification_deliveries j set state=''sending'',attempts=attempts+1,lease_until=now()+interval ''2 minutes'' from picked where j.id=picked.id returning j.*)
+ select coalesce(jsonb_agg(jsonb_build_object(''id'',j.id,''attempt'',j.attempts,''token'',d.token,''notification_id'',n.id,''variant'',n.app_variant,''title'',n.title,
+ ''promotion_body'',case when n.kind=''promotion'' then n.body else null end,''provider'',d.provider,''environment'',d.apns_environment)),''[]''::jsonb)
+ into result from claimed j join private.notification_devices d on d.id=j.device_id join public.app_notifications n on n.id=j.notification_id;return result;
+end;$$;
+notify pgrst,''reload schema'';
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202610310001') then
+      raise exception 'Migration 202610310001 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- Private registered bases, first-name identity, and admin-approved event bookings.
+create table public.professional_home_locations (
+ professional_id uuid primary key references public.profiles on delete cascade,
+ address text not null check(length(trim(address)) between 10 and 500),
+ longitude double precision not null check(longitude between -180 and 180),
+ latitude double precision not null check(latitude between -90 and 90),
+ updated_at timestamptz not null default now()
+);
+alter table public.professional_home_locations enable row level security;
+revoke all on public.professional_home_locations from public,anon,authenticated;
+grant select on public.professional_home_locations to authenticated;
+grant all on public.professional_home_locations to service_role;
+create policy private_home on public.professional_home_locations for select to authenticated using(professional_id=private.current_user_id() or public.is_banner_admin());
+
+create function private.valid_identity_name(value text) returns boolean language sql immutable set search_path='' as $$
+ select value is not null and length(trim(value)) between 2 and 120
+ and value ~ '^[[:alpha:]][[:alpha:][:space:].''’-]*$'
+ and value !~* '(^|[[:space:]])(makeup|photographer|photography|editor|editing|studio|salon|artist|stylist|bridal|wedding|official|booking|best|brand|company|production|creative|dancer|actor|media|agency|services?|offers?)([[:space:]]|$)';
+$$;
+revoke all on function private.valid_identity_name(text) from public,anon,authenticated;
+-- Retain the private helper signature for older callers, but stop generating aliases.
+create or replace function private.professional_username(p_user_id uuid) returns text language sql stable security definer set search_path='' as $$
+ select case when private.valid_identity_name(full_name) then split_part(trim(full_name),' ',1) else 'Professional' end from public.profiles where id=p_user_id;
+$$;
+create or replace function private.enforce_professional_username() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if tg_table_name='professionals' then new.display_name:=private.professional_username(new.id);
+ elsif new.professional_display_name is not null then new.professional_display_name:=case when private.valid_identity_name(new.full_name) then split_part(trim(new.full_name),' ',1) else 'Professional' end;end if;
+ return new;
+end;$$;
+create function private.validate_identity_update() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if new.professional_display_name is not null and not private.valid_identity_name(new.full_name) then raise exception 'Enter your real full name without profession, business names or promotional text';end if;
+ return new;
+end;$$;
+revoke all on function private.validate_identity_update() from public,anon,authenticated;
+create trigger validate_identity_update before update of full_name on public.profiles for each row execute function private.validate_identity_update();
+update public.professionals set display_name=display_name;
+update public.profiles set professional_display_name=private.professional_username(id) where professional_display_name is not null;
+
+create or replace function public.complete_registration(p_full_name text,p_email text,p_professional_name text default null,p_professional boolean default false)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare who uuid:=private.current_user_id();u auth.users;account_name text:=regexp_replace(trim(p_full_name),'\s+',' ','g');public_name text;email_value text;
+begin
+ if who is null then raise exception 'Sign in to complete your profile';end if;
+ perform 1 from public.profiles where id=who for update;
+ select * into u from auth.users where id=who;
+ if nullif(u.phone,'') is null or u.phone_confirmed_at is null then raise exception 'Verify your mobile number first';end if;
+ if account_name is null or length(account_name) not between 2 and 120 or account_name ~* '(https?://|www\.|@)' then raise exception 'Enter your full name';end if;
+ select professional_display_name into public_name from public.profiles where id=who;
+ if p_professional or public_name is not null then
+  if not private.valid_identity_name(account_name) then raise exception 'Enter your real full name without profession, business names or promotional text';end if;
+  public_name:=split_part(account_name,' ',1);
+ end if;
+ email_value:=lower(trim(coalesce(nullif(u.email,''),p_email)));
+ if email_value is null or length(email_value)>254 or email_value !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then raise exception 'Enter a valid email address';end if;
+ update public.profiles set full_name=account_name,display_name=account_name,contact_email=email_value,professional_display_name=public_name,registration_completed_at=coalesce(registration_completed_at,now()) where id=who;
+ if public_name is not null then update public.professionals set display_name=public_name where id=who;end if;
+ return public.my_registration();
+end;$$;
+
+create function private.require_software(specs jsonb,key text,allowed text[]) returns void language plpgsql set search_path='' as $$
+begin
+ if jsonb_typeof(specs->key) is distinct from 'array' then raise exception 'Choose at least one relevant editing software';end if;
+ if jsonb_array_length(specs->key)=0 or exists(select 1 from jsonb_array_elements_text(specs->key) t(value) where not(value=any(allowed))) then raise exception 'Choose valid editing software';end if;
+end;$$;
+revoke all on function private.require_software(jsonb,text,text[]) from public,anon,authenticated;
+create or replace function public.save_professional_profile(p_profile jsonb,p_private jsonb,p_service jsonb)
+returns void language plpgsql security definer set search_path='' as $$
+declare who uuid:=private.current_user_id();account_name text;home jsonb:=p_private->'home_location';specs jsonb:=p_profile->'public_specs';craft text:=p_profile->>'category';field text; lon double precision;lat double precision;
+begin
+ if who is null then raise exception 'Sign in to save your profile';end if;
+ select p.full_name into account_name from public.profiles p where id=who for update;
+ account_name:=coalesce(nullif(trim(p_private->>'identity_full_name'),''),account_name);
+ if not private.valid_identity_name(account_name) then raise exception 'Enter your real full name without profession, business names or promotional text';end if;
+ update public.profiles set full_name=account_name,display_name=account_name where id=who;
+ if home is null or jsonb_typeof(home)<>'object' or length(trim(coalesce(home->>'address',''))) not between 10 and 500 then raise exception 'Provide your registered home address and confirm its map pin';end if;
+ lon:=(home->>'longitude')::double precision;lat:=(home->>'latitude')::double precision;
+ if lon is null or lat is null or not(lon between -180 and 180 and lat between -90 and 90) then raise exception 'Confirm your registered home map pin';end if;
+ if craft='Photographer' then
+  foreach field in array array['lenses','lighting-kit','backup-camera','backup-memory','equipment-pricing'] loop
+   if jsonb_typeof(specs->field) is distinct from 'string' or length(trim(coalesce(specs->>field,''))) not between 2 and 1000 then raise exception 'Complete equipment details: %',field;end if;
+  end loop;
+ end if;
+ if craft='Photographer' or (craft='Editor' and exists(select 1 from jsonb_array_elements_text(coalesce(specs->'editing-services','[]')) t(value) where value='Photo Editing')) then
+  perform private.require_software(specs,'photo-software',array['Adobe Lightroom','Capture One','Adobe Photoshop']);end if;
+ if craft='ContentCreator' or (craft='Editor' and exists(select 1 from jsonb_array_elements_text(coalesce(specs->'editing-services','[]')) t(value) where value='Video Editing')) then
+  perform private.require_software(specs,'video-software',array['Final Cut Pro (FCP)','DaVinci Resolve','Adobe After Effects','Adobe Premiere Pro']);end if;
+ if craft='Editor' and (jsonb_typeof(specs->'editing-services') is distinct from 'array' or jsonb_array_length(specs->'editing-services')=0 or exists(select 1 from jsonb_array_elements_text(specs->'editing-services') t(value) where value not in ('Photo Editing','Video Editing'))) then raise exception 'Choose photo and/or video editing services';end if;
+ insert into public.professional_home_locations(professional_id,address,longitude,latitude) values(who,trim(home->>'address'),lon,lat)
+ on conflict(professional_id) do update set address=excluded.address,longitude=excluded.longitude,latitude=excluded.latitude,updated_at=now();
+ -- Never copy the exact private address/coordinates to the publicly readable profile.
+ p_profile:=p_profile||jsonb_build_object('display_name',split_part(trim(account_name),' ',1),'longitude',round(lon::numeric,2),'latitude',round(lat::numeric,2));
+ perform private.save_professional_profile(p_profile,p_private-'home_location'-'identity_full_name',p_service);
+ update public.profiles set professional_display_name=split_part(trim(account_name),' ',1) where id=who;
+end;$$;
+-- Profile writes go through the validated RPC, including clients that bypass the form.
+revoke insert,update on public.professionals from authenticated;
+revoke insert(id,display_name,category,city,bio,specialties,longitude,latitude,available_now,is_published,portfolio_urls,public_specs),update(display_name,category,city,bio,specialties,longitude,latitude,available_now,is_published,portfolio_urls,public_specs) on public.professionals from authenticated;
+grant update(available_now) on public.professionals to authenticated;
+
+drop function public.discover_live_professionals(public.talent_category,double precision,double precision,text,double precision,boolean);
+create function public.discover_live_professionals(p_category public.talent_category,p_longitude double precision,p_latitude double precision,p_query text default '',p_radius_km double precision default 10,p_available_now boolean default false)
+returns table(id uuid,display_name text,category public.talent_category,city text,bio text,specialties text[],available_now boolean,longitude numeric,latitude numeric,portfolio_urls text[],distance_km double precision,booking_price_paise integer,location_updated_at timestamptz,location_accuracy_meters double precision,availability_status text)
+language sql stable security definer set search_path='' as $$
+ select p.id,p.display_name,p.category,p.city,p.bio,p.specialties,a.online,
+ case when a.online and l.professional_id is not null then l.longitude::numeric else round(h.longitude::numeric,2) end,
+ case when a.online and l.professional_id is not null then l.latitude::numeric else round(h.latitude::numeric,2) end,
+ p.portfolio_urls,d.km,q.total_paise,case when a.online then l.updated_at end,case when a.online then l.accuracy_meters end,case when a.online then 'online' when p.available_now then 'busy' else 'offline' end
+ from public.professionals p left join public.professional_home_locations h on h.professional_id=p.id
+ cross join lateral(select p.available_now and not private.professional_busy(p.id,now(),now()+interval '15 minutes') as online) a
+ left join private.professional_live_locations l on l.professional_id=p.id and l.updated_at>now()-interval '90 seconds' and a.online
+ cross join lateral(select case when l.professional_id is not null then l.longitude else round(h.longitude::numeric,2)::double precision end as lon,case when l.professional_id is not null then l.latitude else round(h.latitude::numeric,2)::double precision end as lat) pos
+ cross join lateral(select 6371*2*asin(sqrt(least(1.0,greatest(0.0,power(sin(radians(pos.lat-p_latitude)/2),2)+cos(radians(p_latitude))*cos(radians(pos.lat))*power(sin(radians(pos.lon-p_longitude)/2),2))))) as km) d
+ join lateral(select min(s.amount_paise) as net from public.services s where s.professional_id=p.id and s.active) s on s.net is not null
+ cross join lateral private.booking_pricing(s.net) q
+ where private.current_user_id() is not null and p.is_published and p.category=p_category and pos.lon is not null and pos.lat is not null
+ and p_latitude between -90 and 90 and p_longitude between -180 and 180 and d.km<=least(greatest(p_radius_km,1),10)
+ and (p_query='' or position(lower(left(p_query,100)) in lower(p.display_name||' '||array_to_string(p.specialties,' ')))>0)
+ order by a.online desc,d.km,p.id limit 100;
+$$;
+revoke all on function public.discover_live_professionals(public.talent_category,double precision,double precision,text,double precision,boolean) from public,anon;
+grant execute on function public.discover_live_professionals(public.talent_category,double precision,double precision,text,double precision,boolean) to authenticated;
+
+alter table private.team_applications add column review_status text not null default 'pending' check(review_status in ('pending','approved','rejected')),
+ add column reviewed_by uuid references public.profiles,add column reviewed_at timestamptz,add column review_note text not null default '' check(length(review_note)<=1000);
+update private.team_applications set review_status='approved' where booking_id is not null;
+create table private.team_declines(event_id uuid references private.team_events on delete cascade,professional_id uuid references public.professionals,created_at timestamptz not null default now(),primary key(event_id,professional_id));
+revoke all on private.team_declines from public,anon,authenticated;
+create function public.reject_team_request(p_event_id uuid) returns void language plpgsql security definer set search_path='' as $$
+begin
+ perform 1 from private.team_events e join private.team_roles r on r.event_id=e.id join public.professionals p on p.category=r.category and p.id=private.current_user_id() and p.is_published where e.id=p_event_id and e.starts_at>now() for update of e;
+ if not found then raise exception 'Matching event not found';end if;
+ if exists(select 1 from private.team_applications where event_id=p_event_id and professional_id=private.current_user_id()) then raise exception 'Withdraw your existing response first';end if;
+ insert into private.team_declines values(p_event_id,private.current_user_id(),now()) on conflict do nothing;
+end;$$;
+-- Keep the participant-scoped existing data, enriching it without exposing other quotes.
+alter function public.team_requests() set schema private;
+revoke all on function private.team_requests() from public,anon,authenticated;
+create function public.team_requests() returns jsonb language sql stable security definer set search_path='' as $$
+ select coalesce(jsonb_agg(e||jsonb_build_object('declined',exists(select 1 from private.team_declines d where d.event_id=(e->>'id')::uuid and d.professional_id=private.current_user_id()),
+ 'my_application',case when e->'my_application'<>'null'::jsonb then e->'my_application'||jsonb_build_object('review_status',(select review_status from private.team_applications where id=(e->'my_application'->>'id')::uuid)) else 'null'::jsonb end)),'[]'::jsonb)
+ from jsonb_array_elements(private.team_requests()) e;
+$$;
+alter function public.team_applicants(uuid) set schema private;
+revoke all on function private.team_applicants(uuid) from public,anon,authenticated;
+create function public.team_applicants(p_event_id uuid) returns jsonb language sql stable security definer set search_path='' as $$
+ select coalesce(jsonb_agg(e||jsonb_build_object('review_status',(select review_status from private.team_applications where id=(e->>'id')::uuid))),'[]'::jsonb) from jsonb_array_elements(private.team_applicants(p_event_id)) e;
+$$;
+create or replace function public.accept_team_applicant(p_application_id uuid,p_expected_total_paise integer) returns public.bookings language plpgsql security definer set search_path='' as $$
+declare b public.bookings;
+begin
+ if not exists(select 1 from private.team_applications a join private.team_events e on e.id=a.event_id where a.id=p_application_id and e.client_id=private.current_user_id()) then raise exception 'Customer application not found';end if;
+ select b1.* into b from private.team_applications a join private.team_events e on e.id=a.event_id join public.bookings b1 on b1.id=a.booking_id where a.id=p_application_id and e.client_id=private.current_user_id() and a.review_status='approved';
+ if not found then raise exception 'Awaiting final admin approval. A professional response does not confirm the booking.';end if;
+ return b;
+end;$$;
+create function public.admin_bulk_requests() returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ return (select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb) from(select e.*,
+ (select jsonb_agg(to_jsonb(r)) from private.team_roles r where r.event_id=e.id) as roles,
+ (select coalesce(jsonb_agg(to_jsonb(a)||jsonb_build_object('first_name',p.display_name,'full_name',u.full_name)),'[]'::jsonb) from private.team_applications a join public.professionals p on p.id=a.professional_id join public.profiles u on u.id=p.id where a.event_id=e.id) as responses,
+ (select coalesce(jsonb_agg(jsonb_build_object('professional_id',d.professional_id,'full_name',u.full_name,'status','declined')),'[]'::jsonb) from private.team_declines d join public.profiles u on u.id=d.professional_id where d.event_id=e.id) as declines
+ from private.team_events e order by e.created_at desc limit 100)t);
+end;$$;
+create function public.review_bulk_response(p_application_id uuid,p_approve boolean,p_note text default '',p_expected_total_paise integer default null) returns uuid language plpgsql security definer set search_path='' as $$
+declare a private.team_applications;e private.team_events;s public.services;fees record;b uuid;needed integer;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ if p_approve is null or p_note is null or length(p_note)>1000 then raise exception 'Invalid review';end if;
+ select e1.* into e from private.team_events e1 join private.team_applications a1 on a1.event_id=e1.id where a1.id=p_application_id for update of e1;
+ if not found then raise exception 'Event response not found';end if;
+ select * into a from private.team_applications where id=p_application_id for update;
+ if p_expected_total_paise is not null and p_expected_total_paise<>a.total_paise then raise exception 'Review the latest application price';end if;
+ if a.review_status='approved' then return a.booking_id;end if;
+ if a.review_status<>'pending' then raise exception 'This response has already been reviewed';end if;
+ if not p_approve then update private.team_applications set review_status='rejected',reviewed_by=private.current_user_id(),reviewed_at=now(),review_note=trim(p_note) where id=a.id;return null;end if;
+ if e.starts_at<=now() then raise exception 'This event has already started';end if;
+ perform 1 from public.professionals where id=a.professional_id and is_published and category=a.category for update;
+ if not found then raise exception 'Professional is no longer available';end if;
+ select quantity into needed from private.team_roles where event_id=e.id and category=a.category;
+ if private.team_selected(e.id,a.category)>=needed then raise exception 'Requested headcount is filled';end if;
+ select * into s from public.services where id=a.service_id and active for share;
+ if not found or s.name<>a.service_name or (e.billing_mode='fixed' and (s.amount_paise<>a.net_paise or s.duration_minutes<>a.duration_minutes)) then raise exception 'This service has changed. Ask for a new professional response';end if;
+ if private.professional_busy(a.professional_id,e.starts_at,e.starts_at+make_interval(mins=>a.duration_minutes)) or exists(select 1 from public.bookings where professional_id=a.professional_id and status in ('requested','accepted','en_route','arrived') and tstzrange(starts_at,ends_at,'[)')&&tstzrange(e.starts_at,e.starts_at+make_interval(mins=>a.duration_minutes),'[)')) then raise exception 'This time is unavailable';end if;
+ if e.billing_mode='hourly' then select * into fees from private.hourly_booking_price(a.net_paise,a.total_paise,1);else select * into fees from private.booking_pricing(a.net_paise);if fees.total_paise<>a.total_paise then raise exception 'Review a new quote before approving';end if;end if;
+ insert into public.bookings(client_id,professional_id,service_id,request_id,service_name,status,starts_at,ends_at,venue,venue_longitude,venue_latitude,notes,amount_paise,service_amount_paise,buyer_fee_paise,talent_fee_paise,talent_payout_paise,billing_mode,hourly_net_paise,hourly_rate_paise)
+ values(e.client_id,a.professional_id,a.service_id,a.id,a.service_name,'accepted',e.starts_at,e.starts_at+make_interval(mins=>a.duration_minutes),e.venue,e.longitude,e.latitude,left(e.title||E'\n'||e.requirements,2000),fees.total_paise,fees.service_amount_paise,fees.buyer_fee_paise,fees.talent_fee_paise,fees.talent_payout_paise,e.billing_mode,case when e.billing_mode='hourly' then a.net_paise end,case when e.billing_mode='hourly' then a.total_paise end) returning id into b;
+ update private.team_applications set review_status='approved',reviewed_by=private.current_user_id(),reviewed_at=now(),review_note=trim(p_note),booking_id=b where id=a.id;
+ return b;
+end;$$;
+revoke all on function public.reject_team_request(uuid),public.admin_bulk_requests(),public.review_bulk_response(uuid,boolean,text,integer),public.team_requests(),public.team_applicants(uuid) from public,anon;
+grant execute on function public.reject_team_request(uuid),public.admin_bulk_requests(),public.review_bulk_response(uuid,boolean,text,integer),public.team_requests(),public.team_applicants(uuid) to authenticated;
+
+-- A photo is private to its owner/admin until individual-portrait review completes.
+alter table public.professional_photos add column review_status text not null default 'pending' check(review_status in ('pending','approved','rejected'));
+create function private.review_avatar_with_profile() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ update public.professional_photos set review_status=new.status where professional_id=new.professional_id;
+ return new;
+end;$$;
+revoke all on function private.review_avatar_with_profile() from public,anon,authenticated;
+create trigger review_avatar_with_profile after insert or update on private.professional_reviews for each row execute function private.review_avatar_with_profile();
+-- New avatar bytes invalidate any previous profile badge until an admin reviews again.
+create function private.reset_avatar_review() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if tg_op='INSERT' or new.storage_path is distinct from old.storage_path then
+  new.review_status:='pending';delete from private.professional_reviews where professional_id=new.professional_id;
+  update public.professionals set verified_at=null where id=new.professional_id;
+ end if;
+ return new;
+end;$$;
+revoke all on function private.reset_avatar_review() from public,anon,authenticated;
+create trigger reset_avatar_review before insert or update of storage_path on public.professional_photos for each row execute function private.reset_avatar_review();
+notify pgrst,'reload schema';
+alter function public.review_professional(uuid,text,text,timestamptz) set schema private;
+revoke all on function private.review_professional(uuid,text,text,timestamptz) from public,anon,authenticated;
+create function public.review_professional(p_id uuid,p_status text,p_note text default '',p_expected_reviewed_at timestamptz default null,p_expected_avatar_path text default null) returns void language plpgsql security definer set search_path='' as $$
+declare path text;account_name text;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ select storage_path into path from public.professional_photos where professional_id=p_id for update;
+ if path is distinct from p_expected_avatar_path then raise exception 'Profile photo changed. Refresh before reviewing';end if;
+ select full_name into account_name from public.profiles where id=p_id;
+ if p_status='approved' and (path is null or not private.valid_identity_name(account_name)) then raise exception 'A valid real name and individual profile photo are required';end if;
+ perform private.review_professional(p_id,p_status,p_note,p_expected_reviewed_at);
+end;$$;
+revoke all on function public.review_professional(uuid,text,text,timestamptz,text) from public,anon;
+grant execute on function public.review_professional(uuid,text,text,timestamptz,text) to authenticated;
+notify pgrst,'reload schema';
+-- Enforce the registered-base requirement when going online, including direct API calls.
+create function private.require_registered_base_online() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if new.available_now and not old.available_now and not exists(select 1 from public.professional_home_locations where professional_id=new.id) then raise exception 'Complete your registered home address in professional details before going online';end if;
+ return new;
+end;$$;
+revoke all on function private.require_registered_base_online() from public,anon,authenticated;
+create trigger require_registered_base_online before update of available_now on public.professionals for each row execute function private.require_registered_base_online();
+-- Later service edits cannot add photo/video work without its relevant software.
+create function private.require_service_software() returns trigger language plpgsql security definer set search_path='' as $$
+declare craft public.talent_category;specs jsonb;
+begin
+ if not new.active then return new;end if;
+ select category,public_specs into craft,specs from public.professionals where id=new.professional_id;
+ if craft='Editor' then
+  if new.service_key='photo-editing' then perform private.require_software(specs,'photo-software',array['Adobe Lightroom','Capture One','Adobe Photoshop']);
+  else perform private.require_software(specs,'video-software',array['Final Cut Pro (FCP)','DaVinci Resolve','Adobe After Effects','Adobe Premiere Pro']);end if;
+ end if;
+ return new;
+end;$$;
+revoke all on function private.require_service_software() from public,anon,authenticated;
+create trigger require_service_software before insert or update of name,service_key,active on public.services for each row execute function private.require_service_software();
+-- Existing explicitly reviewed photos retain their reviewed state.
+update public.professional_photos p set review_status=r.status from private.professional_reviews r where r.professional_id=p.professional_id;
+
+alter function public.admin_professional_profile(uuid) set schema private;
+revoke all on function private.admin_professional_profile(uuid) from public,anon,authenticated;
+create function public.admin_professional_profile(p_id uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare details jsonb;
+begin
+ if not public.is_banner_admin() then raise exception 'Admin access required' using errcode='42501';end if;
+ details:=private.admin_professional_profile(p_id);
+ return details||jsonb_build_object('home_address',(select address from public.professional_home_locations where professional_id=p_id),'photo_review_status',(select review_status from public.professional_photos where professional_id=p_id));
+end;$$;
+revoke all on function public.admin_professional_profile(uuid) from public,anon;
+grant execute on function public.admin_professional_profile(uuid) to authenticated;
+notify pgrst,'reload schema';
+-- New and post-session-guard administrative routines must also reject replaced JWTs.
+do $session_guards$
+declare item record;
+begin
+ for item in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ where n.nspname in ('public','private') and p.prokind='f' and p.prosrc like '%auth.uid()%'
+ and p.proname not in ('current_user_id','activate_app_session','app_session_is_current','release_app_session','app_session_allowed','is_banner_admin','validate_home_banner') loop
+  execute replace(pg_get_functiondef(item.oid),'auth.uid()','private.current_user_id()');
+ end loop;
+end;$session_guards$;
+notify pgrst,'reload schema';
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202610310001','professional_discovery_bulk_approval',array['-- Private registered bases, first-name identity, and admin-approved event bookings.
+create table public.professional_home_locations (
+ professional_id uuid primary key references public.profiles on delete cascade,
+ address text not null check(length(trim(address)) between 10 and 500),
+ longitude double precision not null check(longitude between -180 and 180),
+ latitude double precision not null check(latitude between -90 and 90),
+ updated_at timestamptz not null default now()
+);
+alter table public.professional_home_locations enable row level security;
+revoke all on public.professional_home_locations from public,anon,authenticated;
+grant select on public.professional_home_locations to authenticated;
+grant all on public.professional_home_locations to service_role;
+create policy private_home on public.professional_home_locations for select to authenticated using(professional_id=private.current_user_id() or public.is_banner_admin());
+
+create function private.valid_identity_name(value text) returns boolean language sql immutable set search_path='''' as $$
+ select value is not null and length(trim(value)) between 2 and 120
+ and value ~ ''^[[:alpha:]][[:alpha:][:space:].''''’-]*$''
+ and value !~* ''(^|[[:space:]])(makeup|photographer|photography|editor|editing|studio|salon|artist|stylist|bridal|wedding|official|booking|best|brand|company|production|creative|dancer|actor|media|agency|services?|offers?)([[:space:]]|$)'';
+$$;
+revoke all on function private.valid_identity_name(text) from public,anon,authenticated;
+-- Retain the private helper signature for older callers, but stop generating aliases.
+create or replace function private.professional_username(p_user_id uuid) returns text language sql stable security definer set search_path='''' as $$
+ select case when private.valid_identity_name(full_name) then split_part(trim(full_name),'' '',1) else ''Professional'' end from public.profiles where id=p_user_id;
+$$;
+create or replace function private.enforce_professional_username() returns trigger language plpgsql security definer set search_path='''' as $$
+begin
+ if tg_table_name=''professionals'' then new.display_name:=private.professional_username(new.id);
+ elsif new.professional_display_name is not null then new.professional_display_name:=case when private.valid_identity_name(new.full_name) then split_part(trim(new.full_name),'' '',1) else ''Professional'' end;end if;
+ return new;
+end;$$;
+create function private.validate_identity_update() returns trigger language plpgsql security definer set search_path='''' as $$
+begin
+ if new.professional_display_name is not null and not private.valid_identity_name(new.full_name) then raise exception ''Enter your real full name without profession, business names or promotional text'';end if;
+ return new;
+end;$$;
+revoke all on function private.validate_identity_update() from public,anon,authenticated;
+create trigger validate_identity_update before update of full_name on public.profiles for each row execute function private.validate_identity_update();
+update public.professionals set display_name=display_name;
+update public.profiles set professional_display_name=private.professional_username(id) where professional_display_name is not null;
+
+create or replace function public.complete_registration(p_full_name text,p_email text,p_professional_name text default null,p_professional boolean default false)
+returns jsonb language plpgsql security definer set search_path='''' as $$
+declare who uuid:=private.current_user_id();u auth.users;account_name text:=regexp_replace(trim(p_full_name),''\s+'','' '',''g'');public_name text;email_value text;
+begin
+ if who is null then raise exception ''Sign in to complete your profile'';end if;
+ perform 1 from public.profiles where id=who for update;
+ select * into u from auth.users where id=who;
+ if nullif(u.phone,'''') is null or u.phone_confirmed_at is null then raise exception ''Verify your mobile number first'';end if;
+ if account_name is null or length(account_name) not between 2 and 120 or account_name ~* ''(https?://|www\.|@)'' then raise exception ''Enter your full name'';end if;
+ select professional_display_name into public_name from public.profiles where id=who;
+ if p_professional or public_name is not null then
+  if not private.valid_identity_name(account_name) then raise exception ''Enter your real full name without profession, business names or promotional text'';end if;
+  public_name:=split_part(account_name,'' '',1);
+ end if;
+ email_value:=lower(trim(coalesce(nullif(u.email,''''),p_email)));
+ if email_value is null or length(email_value)>254 or email_value !~ ''^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'' then raise exception ''Enter a valid email address'';end if;
+ update public.profiles set full_name=account_name,display_name=account_name,contact_email=email_value,professional_display_name=public_name,registration_completed_at=coalesce(registration_completed_at,now()) where id=who;
+ if public_name is not null then update public.professionals set display_name=public_name where id=who;end if;
+ return public.my_registration();
+end;$$;
+
+create function private.require_software(specs jsonb,key text,allowed text[]) returns void language plpgsql set search_path='''' as $$
+begin
+ if jsonb_typeof(specs->key) is distinct from ''array'' then raise exception ''Choose at least one relevant editing software'';end if;
+ if jsonb_array_length(specs->key)=0 or exists(select 1 from jsonb_array_elements_text(specs->key) t(value) where not(value=any(allowed))) then raise exception ''Choose valid editing software'';end if;
+end;$$;
+revoke all on function private.require_software(jsonb,text,text[]) from public,anon,authenticated;
+create or replace function public.save_professional_profile(p_profile jsonb,p_private jsonb,p_service jsonb)
+returns void language plpgsql security definer set search_path='''' as $$
+declare who uuid:=private.current_user_id();account_name text;home jsonb:=p_private->''home_location'';specs jsonb:=p_profile->''public_specs'';craft text:=p_profile->>''category'';field text; lon double precision;lat double precision;
+begin
+ if who is null then raise exception ''Sign in to save your profile'';end if;
+ select p.full_name into account_name from public.profiles p where id=who for update;
+ account_name:=coalesce(nullif(trim(p_private->>''identity_full_name''),''''),account_name);
+ if not private.valid_identity_name(account_name) then raise exception ''Enter your real full name without profession, business names or promotional text'';end if;
+ update public.profiles set full_name=account_name,display_name=account_name where id=who;
+ if home is null or jsonb_typeof(home)<>''object'' or length(trim(coalesce(home->>''address'',''''))) not between 10 and 500 then raise exception ''Provide your registered home address and confirm its map pin'';end if;
+ lon:=(home->>''longitude'')::double precision;lat:=(home->>''latitude'')::double precision;
+ if lon is null or lat is null or not(lon between -180 and 180 and lat between -90 and 90) then raise exception ''Confirm your registered home map pin'';end if;
+ if craft=''Photographer'' then
+  foreach field in array array[''lenses'',''lighting-kit'',''backup-camera'',''backup-memory'',''equipment-pricing''] loop
+   if jsonb_typeof(specs->field) is distinct from ''string'' or length(trim(coalesce(specs->>field,''''))) not between 2 and 1000 then raise exception ''Complete equipment details: %'',field;end if;
+  end loop;
+ end if;
+ if craft=''Photographer'' or (craft=''Editor'' and exists(select 1 from jsonb_array_elements_text(coalesce(specs->''editing-services'',''[]'')) t(value) where value=''Photo Editing'')) then
+  perform private.require_software(specs,''photo-software'',array[''Adobe Lightroom'',''Capture One'',''Adobe Photoshop'']);end if;
+ if craft=''ContentCreator'' or (craft=''Editor'' and exists(select 1 from jsonb_array_elements_text(coalesce(specs->''editing-services'',''[]'')) t(value) where value=''Video Editing'')) then
+  perform private.require_software(specs,''video-software'',array[''Final Cut Pro (FCP)'',''DaVinci Resolve'',''Adobe After Effects'',''Adobe Premiere Pro'']);end if;
+ if craft=''Editor'' and (jsonb_typeof(specs->''editing-services'') is distinct from ''array'' or jsonb_array_length(specs->''editing-services'')=0 or exists(select 1 from jsonb_array_elements_text(specs->''editing-services'') t(value) where value not in (''Photo Editing'',''Video Editing''))) then raise exception ''Choose photo and/or video editing services'';end if;
+ insert into public.professional_home_locations(professional_id,address,longitude,latitude) values(who,trim(home->>''address''),lon,lat)
+ on conflict(professional_id) do update set address=excluded.address,longitude=excluded.longitude,latitude=excluded.latitude,updated_at=now();
+ -- Never copy the exact private address/coordinates to the publicly readable profile.
+ p_profile:=p_profile||jsonb_build_object(''display_name'',split_part(trim(account_name),'' '',1),''longitude'',round(lon::numeric,2),''latitude'',round(lat::numeric,2));
+ perform private.save_professional_profile(p_profile,p_private-''home_location''-''identity_full_name'',p_service);
+ update public.profiles set professional_display_name=split_part(trim(account_name),'' '',1) where id=who;
+end;$$;
+-- Profile writes go through the validated RPC, including clients that bypass the form.
+revoke insert,update on public.professionals from authenticated;
+revoke insert(id,display_name,category,city,bio,specialties,longitude,latitude,available_now,is_published,portfolio_urls,public_specs),update(display_name,category,city,bio,specialties,longitude,latitude,available_now,is_published,portfolio_urls,public_specs) on public.professionals from authenticated;
+grant update(available_now) on public.professionals to authenticated;
+
+drop function public.discover_live_professionals(public.talent_category,double precision,double precision,text,double precision,boolean);
+create function public.discover_live_professionals(p_category public.talent_category,p_longitude double precision,p_latitude double precision,p_query text default '''',p_radius_km double precision default 10,p_available_now boolean default false)
+returns table(id uuid,display_name text,category public.talent_category,city text,bio text,specialties text[],available_now boolean,longitude numeric,latitude numeric,portfolio_urls text[],distance_km double precision,booking_price_paise integer,location_updated_at timestamptz,location_accuracy_meters double precision,availability_status text)
+language sql stable security definer set search_path='''' as $$
+ select p.id,p.display_name,p.category,p.city,p.bio,p.specialties,a.online,
+ case when a.online and l.professional_id is not null then l.longitude::numeric else round(h.longitude::numeric,2) end,
+ case when a.online and l.professional_id is not null then l.latitude::numeric else round(h.latitude::numeric,2) end,
+ p.portfolio_urls,d.km,q.total_paise,case when a.online then l.updated_at end,case when a.online then l.accuracy_meters end,case when a.online then ''online'' when p.available_now then ''busy'' else ''offline'' end
+ from public.professionals p left join public.professional_home_locations h on h.professional_id=p.id
+ cross join lateral(select p.available_now and not private.professional_busy(p.id,now(),now()+interval ''15 minutes'') as online) a
+ left join private.professional_live_locations l on l.professional_id=p.id and l.updated_at>now()-interval ''90 seconds'' and a.online
+ cross join lateral(select case when l.professional_id is not null then l.longitude else round(h.longitude::numeric,2)::double precision end as lon,case when l.professional_id is not null then l.latitude else round(h.latitude::numeric,2)::double precision end as lat) pos
+ cross join lateral(select 6371*2*asin(sqrt(least(1.0,greatest(0.0,power(sin(radians(pos.lat-p_latitude)/2),2)+cos(radians(p_latitude))*cos(radians(pos.lat))*power(sin(radians(pos.lon-p_longitude)/2),2))))) as km) d
+ join lateral(select min(s.amount_paise) as net from public.services s where s.professional_id=p.id and s.active) s on s.net is not null
+ cross join lateral private.booking_pricing(s.net) q
+ where private.current_user_id() is not null and p.is_published and p.category=p_category and pos.lon is not null and pos.lat is not null
+ and p_latitude between -90 and 90 and p_longitude between -180 and 180 and d.km<=least(greatest(p_radius_km,1),10)
+ and (p_query='''' or position(lower(left(p_query,100)) in lower(p.display_name||'' ''||array_to_string(p.specialties,'' '')))>0)
+ order by a.online desc,d.km,p.id limit 100;
+$$;
+revoke all on function public.discover_live_professionals(public.talent_category,double precision,double precision,text,double precision,boolean) from public,anon;
+grant execute on function public.discover_live_professionals(public.talent_category,double precision,double precision,text,double precision,boolean) to authenticated;
+
+alter table private.team_applications add column review_status text not null default ''pending'' check(review_status in (''pending'',''approved'',''rejected'')),
+ add column reviewed_by uuid references public.profiles,add column reviewed_at timestamptz,add column review_note text not null default '''' check(length(review_note)<=1000);
+update private.team_applications set review_status=''approved'' where booking_id is not null;
+create table private.team_declines(event_id uuid references private.team_events on delete cascade,professional_id uuid references public.professionals,created_at timestamptz not null default now(),primary key(event_id,professional_id));
+revoke all on private.team_declines from public,anon,authenticated;
+create function public.reject_team_request(p_event_id uuid) returns void language plpgsql security definer set search_path='''' as $$
+begin
+ perform 1 from private.team_events e join private.team_roles r on r.event_id=e.id join public.professionals p on p.category=r.category and p.id=private.current_user_id() and p.is_published where e.id=p_event_id and e.starts_at>now() for update of e;
+ if not found then raise exception ''Matching event not found'';end if;
+ if exists(select 1 from private.team_applications where event_id=p_event_id and professional_id=private.current_user_id()) then raise exception ''Withdraw your existing response first'';end if;
+ insert into private.team_declines values(p_event_id,private.current_user_id(),now()) on conflict do nothing;
+end;$$;
+-- Keep the participant-scoped existing data, enriching it without exposing other quotes.
+alter function public.team_requests() set schema private;
+revoke all on function private.team_requests() from public,anon,authenticated;
+create function public.team_requests() returns jsonb language sql stable security definer set search_path='''' as $$
+ select coalesce(jsonb_agg(e||jsonb_build_object(''declined'',exists(select 1 from private.team_declines d where d.event_id=(e->>''id'')::uuid and d.professional_id=private.current_user_id()),
+ ''my_application'',case when e->''my_application''<>''null''::jsonb then e->''my_application''||jsonb_build_object(''review_status'',(select review_status from private.team_applications where id=(e->''my_application''->>''id'')::uuid)) else ''null''::jsonb end)),''[]''::jsonb)
+ from jsonb_array_elements(private.team_requests()) e;
+$$;
+alter function public.team_applicants(uuid) set schema private;
+revoke all on function private.team_applicants(uuid) from public,anon,authenticated;
+create function public.team_applicants(p_event_id uuid) returns jsonb language sql stable security definer set search_path='''' as $$
+ select coalesce(jsonb_agg(e||jsonb_build_object(''review_status'',(select review_status from private.team_applications where id=(e->>''id'')::uuid))),''[]''::jsonb) from jsonb_array_elements(private.team_applicants(p_event_id)) e;
+$$;
+create or replace function public.accept_team_applicant(p_application_id uuid,p_expected_total_paise integer) returns public.bookings language plpgsql security definer set search_path='''' as $$
+declare b public.bookings;
+begin
+ if not exists(select 1 from private.team_applications a join private.team_events e on e.id=a.event_id where a.id=p_application_id and e.client_id=private.current_user_id()) then raise exception ''Customer application not found'';end if;
+ select b1.* into b from private.team_applications a join private.team_events e on e.id=a.event_id join public.bookings b1 on b1.id=a.booking_id where a.id=p_application_id and e.client_id=private.current_user_id() and a.review_status=''approved'';
+ if not found then raise exception ''Awaiting final admin approval. A professional response does not confirm the booking.'';end if;
+ return b;
+end;$$;
+create function public.admin_bulk_requests() returns jsonb language plpgsql stable security definer set search_path='''' as $$
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ return (select coalesce(jsonb_agg(to_jsonb(t)),''[]''::jsonb) from(select e.*,
+ (select jsonb_agg(to_jsonb(r)) from private.team_roles r where r.event_id=e.id) as roles,
+ (select coalesce(jsonb_agg(to_jsonb(a)||jsonb_build_object(''first_name'',p.display_name,''full_name'',u.full_name)),''[]''::jsonb) from private.team_applications a join public.professionals p on p.id=a.professional_id join public.profiles u on u.id=p.id where a.event_id=e.id) as responses,
+ (select coalesce(jsonb_agg(jsonb_build_object(''professional_id'',d.professional_id,''full_name'',u.full_name,''status'',''declined'')),''[]''::jsonb) from private.team_declines d join public.profiles u on u.id=d.professional_id where d.event_id=e.id) as declines
+ from private.team_events e order by e.created_at desc limit 100)t);
+end;$$;
+create function public.review_bulk_response(p_application_id uuid,p_approve boolean,p_note text default '''',p_expected_total_paise integer default null) returns uuid language plpgsql security definer set search_path='''' as $$
+declare a private.team_applications;e private.team_events;s public.services;fees record;b uuid;needed integer;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ if p_approve is null or p_note is null or length(p_note)>1000 then raise exception ''Invalid review'';end if;
+ select e1.* into e from private.team_events e1 join private.team_applications a1 on a1.event_id=e1.id where a1.id=p_application_id for update of e1;
+ if not found then raise exception ''Event response not found'';end if;
+ select * into a from private.team_applications where id=p_application_id for update;
+ if p_expected_total_paise is not null and p_expected_total_paise<>a.total_paise then raise exception ''Review the latest application price'';end if;
+ if a.review_status=''approved'' then return a.booking_id;end if;
+ if a.review_status<>''pending'' then raise exception ''This response has already been reviewed'';end if;
+ if not p_approve then update private.team_applications set review_status=''rejected'',reviewed_by=private.current_user_id(),reviewed_at=now(),review_note=trim(p_note) where id=a.id;return null;end if;
+ if e.starts_at<=now() then raise exception ''This event has already started'';end if;
+ perform 1 from public.professionals where id=a.professional_id and is_published and category=a.category for update;
+ if not found then raise exception ''Professional is no longer available'';end if;
+ select quantity into needed from private.team_roles where event_id=e.id and category=a.category;
+ if private.team_selected(e.id,a.category)>=needed then raise exception ''Requested headcount is filled'';end if;
+ select * into s from public.services where id=a.service_id and active for share;
+ if not found or s.name<>a.service_name or (e.billing_mode=''fixed'' and (s.amount_paise<>a.net_paise or s.duration_minutes<>a.duration_minutes)) then raise exception ''This service has changed. Ask for a new professional response'';end if;
+ if private.professional_busy(a.professional_id,e.starts_at,e.starts_at+make_interval(mins=>a.duration_minutes)) or exists(select 1 from public.bookings where professional_id=a.professional_id and status in (''requested'',''accepted'',''en_route'',''arrived'') and tstzrange(starts_at,ends_at,''[)'')&&tstzrange(e.starts_at,e.starts_at+make_interval(mins=>a.duration_minutes),''[)'')) then raise exception ''This time is unavailable'';end if;
+ if e.billing_mode=''hourly'' then select * into fees from private.hourly_booking_price(a.net_paise,a.total_paise,1);else select * into fees from private.booking_pricing(a.net_paise);if fees.total_paise<>a.total_paise then raise exception ''Review a new quote before approving'';end if;end if;
+ insert into public.bookings(client_id,professional_id,service_id,request_id,service_name,status,starts_at,ends_at,venue,venue_longitude,venue_latitude,notes,amount_paise,service_amount_paise,buyer_fee_paise,talent_fee_paise,talent_payout_paise,billing_mode,hourly_net_paise,hourly_rate_paise)
+ values(e.client_id,a.professional_id,a.service_id,a.id,a.service_name,''accepted'',e.starts_at,e.starts_at+make_interval(mins=>a.duration_minutes),e.venue,e.longitude,e.latitude,left(e.title||E''\n''||e.requirements,2000),fees.total_paise,fees.service_amount_paise,fees.buyer_fee_paise,fees.talent_fee_paise,fees.talent_payout_paise,e.billing_mode,case when e.billing_mode=''hourly'' then a.net_paise end,case when e.billing_mode=''hourly'' then a.total_paise end) returning id into b;
+ update private.team_applications set review_status=''approved'',reviewed_by=private.current_user_id(),reviewed_at=now(),review_note=trim(p_note),booking_id=b where id=a.id;
+ return b;
+end;$$;
+revoke all on function public.reject_team_request(uuid),public.admin_bulk_requests(),public.review_bulk_response(uuid,boolean,text,integer),public.team_requests(),public.team_applicants(uuid) from public,anon;
+grant execute on function public.reject_team_request(uuid),public.admin_bulk_requests(),public.review_bulk_response(uuid,boolean,text,integer),public.team_requests(),public.team_applicants(uuid) to authenticated;
+
+-- A photo is private to its owner/admin until individual-portrait review completes.
+alter table public.professional_photos add column review_status text not null default ''pending'' check(review_status in (''pending'',''approved'',''rejected''));
+create function private.review_avatar_with_profile() returns trigger language plpgsql security definer set search_path='''' as $$
+begin
+ update public.professional_photos set review_status=new.status where professional_id=new.professional_id;
+ return new;
+end;$$;
+revoke all on function private.review_avatar_with_profile() from public,anon,authenticated;
+create trigger review_avatar_with_profile after insert or update on private.professional_reviews for each row execute function private.review_avatar_with_profile();
+-- New avatar bytes invalidate any previous profile badge until an admin reviews again.
+create function private.reset_avatar_review() returns trigger language plpgsql security definer set search_path='''' as $$
+begin
+ if tg_op=''INSERT'' or new.storage_path is distinct from old.storage_path then
+  new.review_status:=''pending'';delete from private.professional_reviews where professional_id=new.professional_id;
+  update public.professionals set verified_at=null where id=new.professional_id;
+ end if;
+ return new;
+end;$$;
+revoke all on function private.reset_avatar_review() from public,anon,authenticated;
+create trigger reset_avatar_review before insert or update of storage_path on public.professional_photos for each row execute function private.reset_avatar_review();
+notify pgrst,''reload schema'';
+alter function public.review_professional(uuid,text,text,timestamptz) set schema private;
+revoke all on function private.review_professional(uuid,text,text,timestamptz) from public,anon,authenticated;
+create function public.review_professional(p_id uuid,p_status text,p_note text default '''',p_expected_reviewed_at timestamptz default null,p_expected_avatar_path text default null) returns void language plpgsql security definer set search_path='''' as $$
+declare path text;account_name text;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ select storage_path into path from public.professional_photos where professional_id=p_id for update;
+ if path is distinct from p_expected_avatar_path then raise exception ''Profile photo changed. Refresh before reviewing'';end if;
+ select full_name into account_name from public.profiles where id=p_id;
+ if p_status=''approved'' and (path is null or not private.valid_identity_name(account_name)) then raise exception ''A valid real name and individual profile photo are required'';end if;
+ perform private.review_professional(p_id,p_status,p_note,p_expected_reviewed_at);
+end;$$;
+revoke all on function public.review_professional(uuid,text,text,timestamptz,text) from public,anon;
+grant execute on function public.review_professional(uuid,text,text,timestamptz,text) to authenticated;
+notify pgrst,''reload schema'';
+-- Enforce the registered-base requirement when going online, including direct API calls.
+create function private.require_registered_base_online() returns trigger language plpgsql security definer set search_path='''' as $$
+begin
+ if new.available_now and not old.available_now and not exists(select 1 from public.professional_home_locations where professional_id=new.id) then raise exception ''Complete your registered home address in professional details before going online'';end if;
+ return new;
+end;$$;
+revoke all on function private.require_registered_base_online() from public,anon,authenticated;
+create trigger require_registered_base_online before update of available_now on public.professionals for each row execute function private.require_registered_base_online();
+-- Later service edits cannot add photo/video work without its relevant software.
+create function private.require_service_software() returns trigger language plpgsql security definer set search_path='''' as $$
+declare craft public.talent_category;specs jsonb;
+begin
+ if not new.active then return new;end if;
+ select category,public_specs into craft,specs from public.professionals where id=new.professional_id;
+ if craft=''Editor'' then
+  if new.service_key=''photo-editing'' then perform private.require_software(specs,''photo-software'',array[''Adobe Lightroom'',''Capture One'',''Adobe Photoshop'']);
+  else perform private.require_software(specs,''video-software'',array[''Final Cut Pro (FCP)'',''DaVinci Resolve'',''Adobe After Effects'',''Adobe Premiere Pro'']);end if;
+ end if;
+ return new;
+end;$$;
+revoke all on function private.require_service_software() from public,anon,authenticated;
+create trigger require_service_software before insert or update of name,service_key,active on public.services for each row execute function private.require_service_software();
+-- Existing explicitly reviewed photos retain their reviewed state.
+update public.professional_photos p set review_status=r.status from private.professional_reviews r where r.professional_id=p.professional_id;
+
+alter function public.admin_professional_profile(uuid) set schema private;
+revoke all on function private.admin_professional_profile(uuid) from public,anon,authenticated;
+create function public.admin_professional_profile(p_id uuid) returns jsonb language plpgsql stable security definer set search_path='''' as $$
+declare details jsonb;
+begin
+ if not public.is_banner_admin() then raise exception ''Admin access required'' using errcode=''42501'';end if;
+ details:=private.admin_professional_profile(p_id);
+ return details||jsonb_build_object(''home_address'',(select address from public.professional_home_locations where professional_id=p_id),''photo_review_status'',(select review_status from public.professional_photos where professional_id=p_id));
+end;$$;
+revoke all on function public.admin_professional_profile(uuid) from public,anon;
+grant execute on function public.admin_professional_profile(uuid) to authenticated;
+notify pgrst,''reload schema'';
+-- New and post-session-guard administrative routines must also reject replaced JWTs.
+do $session_guards$
+declare item record;
+begin
+ for item in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ where n.nspname in (''public'',''private'') and p.prokind=''f'' and p.prosrc like ''%auth.uid()%''
+ and p.proname not in (''current_user_id'',''activate_app_session'',''app_session_is_current'',''release_app_session'',''app_session_allowed'',''is_banner_admin'',''validate_home_banner'') loop
+  execute replace(pg_get_functiondef(item.oid),''auth.uid()'',''private.current_user_id()'');
+ end loop;
+end;$session_guards$;
+notify pgrst,''reload schema'';
+']);
+do $migration_guard$ begin
+    if exists(select 1 from supabase_migrations.schema_migrations where version='202611010001') then
+      raise exception 'Migration 202611010001 is already applied. Use normal incremental deployment.';
+    end if;
+  end $migration_guard$;
+-- New payouts mature 24 hours after BOTH verified payment and completion.
+alter table public.payout_jobs add column available_at timestamptz;
+update public.payout_jobs j set available_at=case
+ when j.status='pending' and j.beneficiary_id is null then
+ greatest(j.created_at,b.paid_at,b.service_ended_at)+interval '24 hours'
+ else j.created_at end from public.bookings b where b.id=j.booking_id;
+alter table public.payout_jobs alter column available_at set default (now()+interval '24 hours');
+alter table public.payout_jobs alter column available_at set not null;
+update public.payout_jobs set next_attempt_at=greatest(next_attempt_at,available_at)
+ where status='pending' and beneficiary_id is null;
+create index payout_jobs_due on public.payout_jobs(next_attempt_at,available_at) where status in ('pending','processing');
+
+create or replace function private.queue_payout() returns trigger language plpgsql security definer set search_path='' as $$
+declare due timestamptz;
+begin
+ if new.status='completed' and new.paid_at is not null
+ and (old.status<>'completed' or old.paid_at is null) then
+  due:=greatest(now(),new.paid_at,new.service_ended_at)+interval '24 hours';
+  insert into public.payout_jobs(booking_id,professional_id,amount_paise,transfer_id,available_at,next_attempt_at)
+  values(new.id,new.professional_id,new.talent_payout_paise,'CC'||replace(new.id::text,'-',''),due,due) on conflict do nothing;
+ end if;
+ return new;
+end $$;
+revoke all on function private.queue_payout() from public,anon,authenticated;
+
+-- Only masked details are stored. Full bank credentials remain with Cashfree.
+alter table public.payout_accounts add column account_last4 text check(account_last4 ~ '^[0-9]{4}$'),
+ add column bank_ifsc text check(bank_ifsc ~ '^[A-Z]{4}0[A-Z0-9]{6}$'),
+ add column updated_at timestamptz not null default now();
+
+create function public.save_payout_beneficiary(p_professional_id uuid,p_expected_id text,p_beneficiary_id text,p_environment text,p_last4 text,p_ifsc text)
+returns void language plpgsql security definer set search_path='' as $$
+declare current_id text;
+begin
+ perform pg_advisory_xact_lock(hashtextextended(p_professional_id::text,31));
+ select beneficiary_id into current_id from public.payout_accounts where professional_id=p_professional_id for update;
+ if current_id is distinct from p_expected_id then raise exception 'Bank account changed. Refresh before trying again.';end if;
+ insert into public.payout_accounts(professional_id,beneficiary_id,environment,account_last4,bank_ifsc)
+ values(p_professional_id,p_beneficiary_id,p_environment,p_last4,p_ifsc)
+ on conflict(professional_id) do update set beneficiary_id=excluded.beneficiary_id,environment=excluded.environment,
+ account_last4=excluded.account_last4,bank_ifsc=excluded.bank_ifsc,updated_at=now();
+end $$;
+revoke all on function public.save_payout_beneficiary(uuid,text,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.save_payout_beneficiary(uuid,text,text,text,text,text) to service_role;
+
+-- pg_cron calls this server-only dispatcher; credentials stay in encrypted Vault.
+create function private.dispatch_cashfree_payouts() returns void language plpgsql security definer set search_path='' as $$
+declare worker_secret text;
+begin
+ select decrypted_secret into worker_secret from vault.decrypted_secrets where name='artist_house_payout_worker_secret';
+ if worker_secret is null or length(worker_secret)<32 then raise exception 'Payout worker authentication is not configured';end if;
+ perform net.http_post(url:='https://jssxdolqlnharkxatvqe.supabase.co/functions/v1/cashfree-payouts',
+ headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||worker_secret),body:='{}'::jsonb);
+end $$;
+revoke all on function private.dispatch_cashfree_payouts() from public,anon,authenticated;
+
+insert into supabase_migrations.schema_migrations(version,name,statements)
+    values('202611010001','delayed_payouts',array['-- New payouts mature 24 hours after BOTH verified payment and completion.
+alter table public.payout_jobs add column available_at timestamptz;
+update public.payout_jobs j set available_at=case
+ when j.status=''pending'' and j.beneficiary_id is null then
+ greatest(j.created_at,b.paid_at,b.service_ended_at)+interval ''24 hours''
+ else j.created_at end from public.bookings b where b.id=j.booking_id;
+alter table public.payout_jobs alter column available_at set default (now()+interval ''24 hours'');
+alter table public.payout_jobs alter column available_at set not null;
+update public.payout_jobs set next_attempt_at=greatest(next_attempt_at,available_at)
+ where status=''pending'' and beneficiary_id is null;
+create index payout_jobs_due on public.payout_jobs(next_attempt_at,available_at) where status in (''pending'',''processing'');
+
+create or replace function private.queue_payout() returns trigger language plpgsql security definer set search_path='''' as $$
+declare due timestamptz;
+begin
+ if new.status=''completed'' and new.paid_at is not null
+ and (old.status<>''completed'' or old.paid_at is null) then
+  due:=greatest(now(),new.paid_at,new.service_ended_at)+interval ''24 hours'';
+  insert into public.payout_jobs(booking_id,professional_id,amount_paise,transfer_id,available_at,next_attempt_at)
+  values(new.id,new.professional_id,new.talent_payout_paise,''CC''||replace(new.id::text,''-'',''''),due,due) on conflict do nothing;
+ end if;
+ return new;
+end $$;
+revoke all on function private.queue_payout() from public,anon,authenticated;
+
+-- Only masked details are stored. Full bank credentials remain with Cashfree.
+alter table public.payout_accounts add column account_last4 text check(account_last4 ~ ''^[0-9]{4}$''),
+ add column bank_ifsc text check(bank_ifsc ~ ''^[A-Z]{4}0[A-Z0-9]{6}$''),
+ add column updated_at timestamptz not null default now();
+
+create function public.save_payout_beneficiary(p_professional_id uuid,p_expected_id text,p_beneficiary_id text,p_environment text,p_last4 text,p_ifsc text)
+returns void language plpgsql security definer set search_path='''' as $$
+declare current_id text;
+begin
+ perform pg_advisory_xact_lock(hashtextextended(p_professional_id::text,31));
+ select beneficiary_id into current_id from public.payout_accounts where professional_id=p_professional_id for update;
+ if current_id is distinct from p_expected_id then raise exception ''Bank account changed. Refresh before trying again.'';end if;
+ insert into public.payout_accounts(professional_id,beneficiary_id,environment,account_last4,bank_ifsc)
+ values(p_professional_id,p_beneficiary_id,p_environment,p_last4,p_ifsc)
+ on conflict(professional_id) do update set beneficiary_id=excluded.beneficiary_id,environment=excluded.environment,
+ account_last4=excluded.account_last4,bank_ifsc=excluded.bank_ifsc,updated_at=now();
+end $$;
+revoke all on function public.save_payout_beneficiary(uuid,text,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.save_payout_beneficiary(uuid,text,text,text,text,text) to service_role;
+
+-- pg_cron calls this server-only dispatcher; credentials stay in encrypted Vault.
+create function private.dispatch_cashfree_payouts() returns void language plpgsql security definer set search_path='''' as $$
+declare worker_secret text;
+begin
+ select decrypted_secret into worker_secret from vault.decrypted_secrets where name=''artist_house_payout_worker_secret'';
+ if worker_secret is null or length(worker_secret)<32 then raise exception ''Payout worker authentication is not configured'';end if;
+ perform net.http_post(url:=''https://jssxdolqlnharkxatvqe.supabase.co/functions/v1/cashfree-payouts'',
+ headers:=jsonb_build_object(''Content-Type'',''application/json'',''Authorization'',''Bearer ''||worker_secret),body:=''{}''::jsonb);
+end $$;
+revoke all on function private.dispatch_cashfree_payouts() from public,anon,authenticated;
+']);
 notify pgrst, 'reload schema';
 commit;
 select 'CC Circle database deployment complete' as result;

@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-21T15:18:21.405Z",
+  "previews": [
+    {
+      "role": "professional",
+      "url": "https://rhythm-nearly-completion-corps.trycloudflare.com",
+      "https": 200,
+      "latestUI": true,
+      "manifest": true,
+      "callbackPage": true,
+      "privateFilesBlocked": true,
+      "mediaPreflight": 204
+    },
+    {
+      "role": "customer",
+      "url": "https://stamp-prague-respective-view.trycloudflare.com",
+      "https": 200,
+      "latestUI": true,
+      "manifest": true,
+      "callbackPage": true,
+      "privateFilesBlocked": true,
+      "mediaPreflight": 204
+    }
+  ],
+  "privateCredentialScansPassed": true,
+  "unauthenticatedMediaStatus": 401,
+  "physicalIPhoneTested": false,
+  "temporary": true,
+  "requiresThisComputerRunning": true
+}

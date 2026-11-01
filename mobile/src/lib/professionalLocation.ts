@@ -146,8 +146,8 @@ export function startProfessionalLocation(userId: string, requestBackground = fa
       await Location.startLocationUpdatesAsync(PROFESSIONAL_LOCATION_TASK, {
         accuracy: Location.Accuracy.BestForNavigation, timeInterval: 3000, distanceInterval: 0,
         pausesUpdatesAutomatically: false, showsBackgroundLocationIndicator: true,
-        ...(Platform.OS === 'android' ? { foregroundService: { notificationTitle: 'Circle · You are online',
-          notificationBody: 'Sharing your live location. Go offline in Circle to stop.',
+        ...(Platform.OS === 'android' ? { foregroundService: { notificationTitle: 'Artist House · You are online',
+          notificationBody: 'Sharing your live location. Go offline in Artist House to stop.',
           notificationColor: '#000000', killServiceOnDestroy: false } } : {}),
         ...(Platform.OS === 'ios' ? { activityType: Location.ActivityType.AutomotiveNavigation, deferredUpdatesDistance: 0, deferredUpdatesInterval: 0 } : {}),
       });
@@ -165,7 +165,7 @@ export function startProfessionalLocation(userId: string, requestBackground = fa
     void freshFix(userId);
     if (requestBackground && Platform.OS !== 'web' && !background) {
       update({ error: Platform.OS === 'ios'
-        ? 'Background access was not granted. In iPhone Settings → Circle → Location, choose Always and enable Precise Location. Sharing currently works while Circle is open.'
+        ? 'Background access was not granted. In iPhone Settings → Artist House → Location, choose Always and enable Precise Location. Sharing currently works while Artist House is open.'
         : 'Background access was not granted. Sharing works while this app is open. Enable Allow all the time in location settings to share in the background.' });
     }
   });

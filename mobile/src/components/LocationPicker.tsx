@@ -1,3 +1,4 @@
+import { MapPlaceSearch } from './MapPlaceSearch';
 import { AppFooter } from './AppFooter';
 import { KeyboardAwareScrollView as ScrollView } from './KeyboardAwareScrollView';
 import { useEffect, useRef, useState } from 'react';
@@ -71,7 +72,7 @@ export function LocationPicker({ center, label, onSelect, compact = false, foreg
     <Modal visible={open} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS==='android'?'height':undefined} style={{ flex: 1, backgroundColor: colors.panel, maxHeight:viewportHeight }}><SafeAreaView style={{flex:1,width:'100%',maxWidth:mapOpen?undefined:680,alignSelf:'center'}}>
       <View style={[styles.between,{paddingHorizontal:22,paddingVertical:12,flexShrink:0}]}><Text style={styles.heading}>Choose your location</Text><IconButton name="close" label="Close location search" onPress={close} /></View>
       {!mapOpen&&<View style={{paddingHorizontal:22,paddingBottom:12,flexShrink:0}}><Field label="Search location" value={query} onChange={value => { cancelSelection(); setQuery(value); }} maxLength={256} autoFocus autoCapitalize="words" placeholder="Hotel, apartment, street or area in India" /><Notice message={error}/></View>}
-      {mapOpen ? <MapExperience title="Choose the entrance" map={{center:pin,onChooseLocation:setPin,centerIsLocation:true}}
+      {mapOpen ? <MapExperience title="Choose the entrance" top={<MapPlaceSearch center={pin} onSelect={(point,address)=>{setPin(point);setPinName(address);}} />} map={{center:pin,onChooseLocation:setPin,centerIsLocation:true}}
         footer={<Button title="Use this map pin" onPress={() => choose(pin, pinName.trim() || coordinateLocationLabel(pin))} />}>
         <Text style={styles.muted}>Tap the entrance or meeting point.</Text>
         <Field label="Place or building name (optional)" value={pinName} onChange={setPinName} maxLength={200} placeholder="Apartment, hotel or meeting point" />

@@ -1,0 +1,11 @@
+{
+  "width": 1080,
+  "height": 1920,
+  "seconds": 14,
+  "fps": 30,
+  "audio": "silent; add music in Instagram",
+  "format": "H.264 MP4",
+  "sourceCode": "mobile/src/lib/campaignColors.ts",
+  "appCapture": "Circle Customer Chrome welcome screen",
+  "presentation": "Edited split-screen laptop composition with an iPhone-style browser preview; not an iOS Simulator recording"
+}

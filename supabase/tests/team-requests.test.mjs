@@ -1,3 +1,5 @@
+import {grantTestAdmin,approveTestTeam} from './professional-fixtures.mjs';
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -16,10 +18,11 @@ test('multi-profession event applications reserve exact headcounts with private 
   for(const file of (await readdir(folder)).filter(name=>name.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,folder),'utf8'));
   const [customer,stranger,...pros]=Array.from({length:9},()=>crypto.randomUUID());
   for(const id of [customer,stranger,...pros])await db.query('insert into auth.users(id) values($1)',[id]);
+  await grantTestAdmin(db,customer);
   await db.query("update public.profiles set display_name='Wedding Customer' where id=$1",[customer]);
   const kinds=['Photographer','Photographer','Photographer','Makeup','Makeup','HairStylist','Dancer'];
   async function as(id,run){await db.exec('set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);try{return await run();}finally{await db.exec('reset role');}}
-  for(let i=0;i<pros.length;i++)await as(pros[i],()=>db.query('select public.save_professional_profile($1,$2,$3)',[
+  for(let i=0;i<pros.length;i++)await as(pros[i],()=>saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)',[
     {display_name:`Event Studio ${i}`,category:kinds[i],city:'Bengaluru',bio:'Experienced professional available for beautiful wedding events.',specialties:['Weddings'],longitude:77.64,latitude:12.97,portfolio_urls:['https://example.com/work'],public_specs:{}},
     {},{name:'Event session',amount_paise:500000,duration_minutes:120}
   ]));
@@ -56,9 +59,9 @@ test('multi-profession event applications reserve exact headcounts with private 
   const own=(await list(pros[0]))[0].my_application;
   assert.equal(own.net_paise,500000);assert.equal(own.total_paise,undefined,'Professional cannot see the customer total');
   assert.ok(!JSON.stringify(await list(pros[0])).includes(pros[1]),'Other applicants are private');
-  const accept=(i,total=559800,who=customer)=>as(who,async()=>(await db.query('select (public.accept_team_applicant($1,$2)).*',[applications[i],total])).rows[0]);
-  await assert.rejects(()=>accept(0,559800,stranger),/Customer application not found/);
-  await assert.rejects(()=>accept(0,559800,pros[0]),/Customer application not found/);
+  const accept=(i,total=559800,who=customer)=>as(who,async()=>(await approveTestTeam(db,'select (public.accept_team_applicant($1,$2)).*',[applications[i],total])).rows[0]);
+  await assert.rejects(()=>accept(0,559800,stranger),/Admin access required/);
+  await assert.rejects(()=>accept(0,559800,pros[0]),/Admin access required/);
   await assert.rejects(()=>accept(0,1),/latest application price/);
   await db.query('update public.services set amount_paise=600000 where id=$1',[serviceIds[0]]);
   await assert.rejects(()=>accept(0),/service has changed/);

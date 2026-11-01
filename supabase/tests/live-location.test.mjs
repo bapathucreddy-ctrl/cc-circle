@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -21,7 +22,7 @@ test('live discovery uses fresh owner GPS, hides offline/stale pins and protects
       await db.exec('set role authenticated'); await db.query("select set_config('request.jwt.claim.sub',$1,false)", [user]);
       try { return await run(); } finally { await db.exec('reset role'); }
     }
-    await as(talent, () => db.query('select public.save_professional_profile($1,$2,$3)', [
+    await as(talent, () => saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)', [
       { display_name: 'Availability Artist', category: 'Actor', city: 'Bengaluru', bio: 'Experienced performer checking availability and scheduling.', specialties: [], longitude: 77.64, latitude: 12.978, portfolio_urls: ['https://example.com/work'] },
       {}, { name: 'Performance', amount_paise: 500000, duration_minutes: 60 },
     ]));
@@ -36,7 +37,7 @@ test('live discovery uses fresh owner GPS, hides offline/stale pins and protects
     await assert.rejects(as(customerA,()=>db.query('select public.publish_professional_location_fix(77.64,12.97,10)')));
     await assert.rejects(as(talent,()=>db.query('select public.publish_professional_location_fix(77.64,12.97,-1)')));
     await db.query("insert into public.availability_blocks(professional_id,starts_at,ends_at) values($1,now()-interval '1 minute',now()+interval '1 hour')",[talent]);
-    rows=await discovery();assert.equal(rows[0].available_now,false);assert.equal(rows[0].location_updated_at,null);assert.equal((await discovery(true)).length,0,'busy professionals remain unavailable even with fresh GPS');
+    rows=await discovery();assert.equal(rows[0].available_now,false);assert.equal(rows[0].location_updated_at,null);assert.equal((await discovery(true)).length,1,'busy professionals remain visible as unavailable at their approximate home area');
     await db.query('delete from public.availability_blocks where professional_id=$1',[talent]);
     await assert.rejects(as(customerA,()=>db.query('select * from private.professional_live_locations')));
     await as(customerA,()=>db.query('select public.clear_professional_location()'));assert.ok((await discovery())[0].location_updated_at,'another user cannot clear GPS');
@@ -44,7 +45,7 @@ test('live discovery uses fresh owner GPS, hides offline/stale pins and protects
     rows=await discovery();assert.equal(rows[0].location_updated_at,null);assert.equal(rows[0].available_now,true);
     await as(talent,()=>db.query('select public.publish_professional_location(77.641234,12.979876)'));
     await as(talent,()=>db.query('update public.professionals set available_now=false where id=$1',[talent]));
-    assert.equal((await discovery())[0].location_updated_at,null);assert.equal((await discovery())[0].available_now,false);assert.equal((await discovery(true)).length,0);
+    assert.equal((await discovery())[0].location_updated_at,null);assert.equal((await discovery())[0].available_now,false);assert.equal((await discovery(true)).length,1);
     await assert.rejects(as(talent,()=>db.query('select public.publish_professional_location(77.64,12.97)')));
     await as(talent,()=>db.query('select public.clear_professional_location()'));assert.equal((await db.query('select count(*)::int as n from private.professional_live_locations')).rows[0].n,0);
   }finally{await db.close();}

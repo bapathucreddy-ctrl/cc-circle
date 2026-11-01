@@ -14,7 +14,7 @@ export function ProfessionalLocation({person}:{person:Professional}){
   void liveLocationAddress(person.longitude,person.latitude,approximate,controller.signal).then(value=>{if(!controller.signal.aborted)setAddress({key,value});}).catch(()=>{if(!controller.signal.aborted)setAddress({key,value:null});});
   return()=>controller.abort();
  },[key]);
- if(!live)return <View style={{gap:3}}><Text style={styles.muted}>Current location unavailable</Text><Text style={styles.muted}>Registered service area: {person.city}</Text></View>;
+ if(!live)return <View style={{gap:3}}><Text style={styles.muted}>Live location unavailable · approximate base area</Text><Text style={styles.muted}>Base city: {person.city}</Text></View>;
  const current=address?.key===key?address.value:null;
  return <View style={{gap:3}}>
   <Text style={styles.muted}>{approximate?'Current area':'Current location'}: {current||`${person.latitude.toFixed(5)}, ${person.longitude.toFixed(5)}`}</Text>

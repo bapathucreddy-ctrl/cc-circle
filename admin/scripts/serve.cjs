@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),http=require('http');
-const root=path.resolve(__dirname,'../dist'),types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
+const root=path.resolve(__dirname,'../dist'),types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg'};
 http.createServer((req,res)=>{
  try {const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
  if(!file.startsWith(root+path.sep)||name.split('/').some(part=>part.startsWith('.'))||!fs.statSync(file).isFile())throw Error('Not found');

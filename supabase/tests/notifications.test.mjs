@@ -1,3 +1,4 @@
+import {saveTestProfile} from './professional-fixtures.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -15,7 +16,7 @@ async function fixture(run) {
   const [customer,pro,stranger]=Array.from({length:3},()=>crypto.randomUUID());
   for(const id of [customer,pro,stranger]) await db.query('insert into auth.users(id) values($1)',[id]);
   async function as(id,run){await db.exec('set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);try{return await run();}finally{await db.exec('reset role');}}
-  await as(pro,()=>db.query('select public.save_professional_profile($1,$2,$3)',[{display_name:'Lens Studio',category:'Photographer',city:'Bengaluru',bio:'A professional photographer for events and editorial work.',specialties:['Portrait'],longitude:77.64,latitude:12.97,portfolio_urls:['https://example.com/work'],public_specs:{}},{},{name:'Portrait session',amount_paise:500000,duration_minutes:60}]));
+  await as(pro,()=>saveTestProfile(db,'select public.save_professional_profile($1,$2,$3)',[{display_name:'Lens Studio',category:'Photographer',city:'Bengaluru',bio:'A professional photographer for events and editorial work.',specialties:['Portrait'],longitude:77.64,latitude:12.97,portfolio_urls:['https://example.com/work'],public_specs:{}},{},{name:'Portrait session',amount_paise:500000,duration_minutes:60}]));
   const service=(await db.query('select id from public.services')).rows[0].id;
   const request=async()=>as(customer,async()=>(await db.query("select (public.request_booking($1,now()+interval '1 day','Private venue address',77.64,12.97,'',$2,559800)).*",[service,crypto.randomUUID()])).rows[0]);
   const notes=async who=>as(who,async()=>(await db.query('select * from public.app_notifications order by created_at')).rows);

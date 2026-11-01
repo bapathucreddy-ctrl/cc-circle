@@ -6,7 +6,7 @@ import {Asset} from 'expo-asset';
 import {categoryLabels,type Coordinate,type Professional} from '../domain';
 import {useTheme} from '../ui';
 import {MapControls,MapHeader} from './MapControls';
-import {destinationImage,trackingRiderImages,genericTrackingRiderImage} from './mapArtwork';
+import {destinationImage,trackingRiderImages,genericTrackingRiderImage,craftIconImages,genericCraftImage} from './mapArtwork';
 import {useTrackingPoint} from './useTrackingPoint';
 import {useNavigationHeading} from './useNavigationHeading';
 import {riderRotation} from '../lib/navigationHeading';
@@ -18,7 +18,7 @@ import type {TalentMapProps} from './TalentMap.types';
 const token=process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 const mapLoadError='Unable to load Mapbox. Check the connection and graphics support.';
 const empty:NonNullable<TalentMapProps['professionals']>=[];
-export function TalentMap({center:rawCenter,professionals=empty,destination,heading:reportedHeading,tracking=false,trackingCategory,centerIsLocation=true,route,onSelect,onChooseLocation,height=300,label,status,distanceLabel,immersive=false,overlayBottom=0,overlayTop=0,cameraOverlayBottom=overlayBottom,selectedProfessionalId}:TalentMapProps){
+export function TalentMap({center:rawCenter,professionals=empty,destination,heading:reportedHeading,tracking=false,travelling=tracking,trackingCategory,centerIsLocation=true,route,onSelect,onChooseLocation,height=300,label,status,distanceLabel,immersive=false,overlayBottom=0,overlayTop=0,cameraOverlayBottom=overlayBottom,selectedProfessionalId}:TalentMapProps){
  const pose=useMemo(()=>routePose(rawCenter,tracking?route:undefined),[rawCenter[0],rawCenter[1],route,tracking]);const center=tracking?pose.point:rawCenter;
  const {colors,mode}=useTheme();const container=useRef<HTMLDivElement>(null),map=useRef<MapInstance|null>(null),rider=useRef<mapboxgl.Marker|null>(null);
  const callbacks=useRef({onSelect,onChooseLocation});callbacks.current={onSelect,onChooseLocation};
@@ -51,16 +51,16 @@ export function TalentMap({center:rawCenter,professionals=empty,destination,head
  useEffect(()=>{if(!ready||!map.current)return;const markers:mapboxgl.Marker[]=[];
   function add(point:Coordinate,artwork:number|undefined,size:number,title:string,onClick?:()=>void){const el=document.createElement(onClick?'button':'div');el.setAttribute('aria-label',title);Object.assign(el.style,{padding:'0',background:artwork?'transparent':colors.accent,border:artwork?'none':'2px solid '+colors.panel,borderRadius:'50%',width:size+'px',height:size+'px',cursor:onClick?'pointer':'default'});if(artwork){const img=document.createElement('img');img.src=Asset.fromModule(artwork).uri;img.alt='';Object.assign(img.style,{width:size+'px',height:size+'px',objectFit:'contain',pointerEvents:'none'});el.append(img);}if(onClick)el.addEventListener('click',event=>{event.stopPropagation();onClick();});const marker=new mapboxgl.Marker({element:el,rotationAlignment:'viewport',pitchAlignment:'viewport'}).setLngLat(point).addTo(map.current!);markers.push(marker);return marker;}
   if(tracking){
-   const width=aerial?nav.aerialRiderWidth:nav.riderWidth,height=aerial?nav.aerialRiderHeight:nav.riderHeight;
-   const el=document.createElement('div');el.setAttribute('aria-label',trackingCategory?categoryLabels[trackingCategory]+' travelling along the route':'Professional travelling along the route');Object.assign(el.style,{width:width+'px',height:height+'px'});
-   const img=document.createElement('img');img.src=Asset.fromModule(trackingCategory?trackingRiderImages[trackingCategory]:genericTrackingRiderImage).uri;img.alt='';Object.assign(img.style,{width:'100%',height:'100%',objectFit:'contain',pointerEvents:'none'});el.append(img);
-   if(aerial){const pointer=document.createElement('span');pointer.dataset.direction='true';Object.assign(pointer.style,{position:'absolute',bottom:'0',left:'50%',width:'0',height:'0',borderLeft:'6px solid transparent',borderRight:'6px solid transparent',borderBottom:'12px solid '+colors.text});el.append(pointer);}
-   rider.current=new mapboxgl.Marker({element:el,anchor:'bottom',rotationAlignment:'viewport',pitchAlignment:'viewport',offset:[0,aerial?nav.aerialRiderOffset:nav.riderOffset]}).setLngLat(center).addTo(map.current);markers.push(rider.current);
+   const width=travelling?(aerial?nav.aerialRiderWidth:nav.riderWidth):64,height=travelling?(aerial?nav.aerialRiderHeight:nav.riderHeight):64;
+   const el=document.createElement('div');el.setAttribute('aria-label',travelling?(trackingCategory?categoryLabels[trackingCategory]+' travelling along the route':'Professional travelling along the route'):(trackingCategory?categoryLabels[trackingCategory]+' at the service location':'Professional at the service location'));Object.assign(el.style,{width:width+'px',height:height+'px'});
+   const img=document.createElement('img');img.src=Asset.fromModule(travelling?(trackingCategory?trackingRiderImages[trackingCategory]:genericTrackingRiderImage):(trackingCategory?craftIconImages[trackingCategory]:genericCraftImage)).uri;img.alt='';Object.assign(img.style,{width:'100%',height:'100%',objectFit:'contain',pointerEvents:'none'});el.append(img);
+   if(travelling&&aerial){const pointer=document.createElement('span');pointer.dataset.direction='true';Object.assign(pointer.style,{position:'absolute',bottom:'0',left:'50%',width:'0',height:'0',borderLeft:'6px solid transparent',borderRight:'6px solid transparent',borderBottom:'12px solid '+colors.text});el.append(pointer);}
+   rider.current=new mapboxgl.Marker({element:el,anchor:'bottom',rotationAlignment:'viewport',pitchAlignment:'viewport',offset:[0,travelling?(aerial?nav.aerialRiderOffset:nav.riderOffset):0]}).setLngLat(center).addTo(map.current);markers.push(rider.current);
   }else rider.current=add(center,centerIsLocation?destinationImage:undefined,centerIsLocation?58:18,'Current service location');
   if(destination)add(destination,destinationImage,58,'Service destination');
 
   return()=>{markers.forEach(m=>m.remove());rider.current=null;};
- },[ready,destination?.[0],destination?.[1],tracking,trackingCategory,centerIsLocation,colors.accent,colors.panel,colors.text,aerial]);
+ },[ready,destination?.[0],destination?.[1],tracking,travelling,trackingCategory,centerIsLocation,colors.accent,colors.panel,colors.text,aerial]);
  useEffect(()=>{const instance=map.current;if(!instance||!tracking)return;const rotate=()=>{const pointer=rider.current?.getElement().querySelector<HTMLElement>('[data-direction]');if(pointer)pointer.style.transform='translateX(-50%) rotate('+riderRotation(heading,instance.getBearing())+'deg)';};rotate();instance.on('rotate',rotate);return()=>{instance.off('rotate',rotate);};},[heading,ready,tracking,trackingCategory,centerIsLocation,colors.accent,colors.panel,colors.text,aerial]);
  useEffect(()=>{const instance=map.current;if(!ready||!instance)return;if(tracking&&!aerial){instance.dragRotate.disable();instance.touchZoomRotate.disableRotation();}else{instance.dragRotate.enable();instance.touchZoomRotate.enableRotation();}},[ready,tracking,aerial]);
  useEffect(()=>{rider.current?.setLngLat(moving);},[moving[0],moving[1],ready,tracking,trackingCategory,centerIsLocation,colors.accent,colors.panel,aerial]);
@@ -80,13 +80,13 @@ function ProfessionalPin({map,person,onSelect,selected=false}:{map:MapInstance;p
  const point=useTrackingPoint([person.longitude,person.latitude],true);
  const marker=useRef<mapboxgl.Marker|null>(null),current=useRef({person,onSelect});current.current={person,onSelect};
  useEffect(()=>{
-  const el=document.createElement('button');el.setAttribute('aria-label','View '+person.display_name+', '+categoryLabels[person.category]);
-  Object.assign(el.style,{padding:'0',background:'transparent',border:'none',width:'52px',height:'78px',cursor:'pointer',borderRadius:'16px',outline:selected?'3px solid #111':'none',backgroundColor:selected?'#fff':'transparent'});
-  const img=document.createElement('img');img.src=Asset.fromModule(trackingRiderImages[person.category]).uri;img.alt='';Object.assign(img.style,{width:'52px',height:'78px',objectFit:'contain',pointerEvents:'none'});el.append(img);
+  const el=document.createElement('button');el.setAttribute('aria-label','View '+person.display_name+', '+categoryLabels[person.category]+', '+(person.available_now?'online':person.availability_status==='busy'?'busy':'offline, approximate area'));
+  Object.assign(el.style,{padding:'0',background:'transparent',border:'none',width:'52px',height:'70px',display:'flex',flexDirection:'column',alignItems:'center',cursor:'pointer',borderRadius:'16px',outline:selected?'3px solid #111':'none',backgroundColor:selected?'#fff':'transparent'});
+  const img=document.createElement('img');img.src=Asset.fromModule(craftIconImages[person.category]).uri;img.alt='';Object.assign(img.style,{width:'52px',height:'78px',objectFit:'contain',pointerEvents:'none'});img.style.opacity=person.available_now?'1':'.55';el.append(img);const status=document.createElement('span');status.textContent=person.available_now?'Online':person.availability_status==='busy'?'Busy':'Offline';Object.assign(status.style,{fontSize:'9px',background:'#fff',color:'#111',padding:'1px 3px',borderRadius:'5px'});el.append(status);
   el.addEventListener('click',event=>{event.stopPropagation();current.current.onSelect?.(current.current.person);});
   marker.current=new mapboxgl.Marker({element:el}).setLngLat([person.longitude,person.latitude]).addTo(map);
   return()=>{marker.current?.remove();marker.current=null;};
- },[map,person.id,person.category,person.display_name,selected]);
+ },[map,person.id,person.category,person.display_name,person.available_now,person.availability_status,selected]);
  useEffect(()=>{marker.current?.setLngLat(point);},[point[0],point[1]]);
  return null;
 }

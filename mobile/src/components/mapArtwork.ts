@@ -1,4 +1,4 @@
-import type { Category } from '../domain';
+import type { BookingStatus, Category } from '../domain';
 
 export const destinationImage = require('../../assets/brand/destination.png');
 export const genericRiderImage = require('../../assets/brand/rider-generic-neutral.png');
@@ -32,3 +32,18 @@ export const riderImages: Record<Category, number> = {
   HairStylist: require('../../assets/brand/rider-hairstylist-neutral.png'),
   ContentCreator: require('../../assets/brand/rider-contentcreator-neutral.png'),
 };
+
+/** Craft-only artwork outside an active journey; legacy hidden crafts retain a fallback. */
+export const craftIconImages: Record<Category, number> = {
+ Makeup: require('../../assets/crafts/realistic-makeup.png'),
+ Photographer: require('../../assets/crafts/realistic-photographer.png'),
+ Editor: require('../../assets/crafts/realistic-editor.png'),
+ HairStylist: require('../../assets/crafts/realistic-hairstylist.png'),
+ ContentCreator: require('../../assets/crafts/realistic-contentcreator.png'),
+ Actor: require('../../assets/brand/badge-actor.png'),
+ Dancer: require('../../assets/brand/badge-dancer.png'),
+};
+export const genericCraftImage = require('../../assets/crafts/realistic-team.png');
+export function bookingActivityImage(category: Category | undefined, status: BookingStatus) {
+ return status === 'en_route' ? (category ? riderImages[category] : genericRiderImage) : (category ? craftIconImages[category] : genericCraftImage);
+}

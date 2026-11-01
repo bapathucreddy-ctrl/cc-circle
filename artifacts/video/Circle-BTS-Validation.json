@@ -1,0 +1,14 @@
+{
+  "seconds": 14,
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "videoCodec": "H.264",
+  "pixelFormat": "yuv420p",
+  "silent": true,
+  "decodePassed": true,
+  "bytes": 3187126,
+  "originalCodeAndAppScreenshot": true,
+  "editedComposition": true,
+  "nativeSimulatorRecording": false
+}

@@ -59,6 +59,7 @@ function Marketplace({ userId, notificationTarget, onHomeChange, onBannerColorCh
         if (error || !data) setError('This booking is no longer available.'); else navigate({ screen: 'detail', booking: data as Booking });
       });
     } else if (notificationTarget.event_id) reset({ screen: 'request' });
+    else if (notificationTarget.kind === 'promotion') reset({ screen: 'home' });
     else if (notificationTarget.kind === 'portfolio') reset({ screen: 'account' });
     return () => { active = false; };
   }, [notificationTarget, userId]);
@@ -104,7 +105,7 @@ function Marketplace({ userId, notificationTarget, onHomeChange, onBannerColorCh
     <View key={JSON.stringify(route)} style={{ flex: 1 }}>{screen}</View>
     <CustomerActivityDock userId={userId} hideReviewReminder={route.screen === 'discover'} currentBookingId={route.screen === 'detail' ? route.booking.id : undefined} refreshVersion={activityVersion} reviewedBookingIds={reviewedBookingIds} onOpen={booking => navigate({ screen: 'detail', booking })} />
     <View style={{ flexDirection: 'row', justifyContent: 'space-around', backgroundColor: colors.panel, borderTopWidth: 1, borderColor: colors.line, paddingVertical: 8 }}>
-      {([['home', 'Home', 'home'], ['discover', 'Discover', 'search'], ['request', 'Request', 'plus'], ['bookings', 'Bookings', 'calendar'], ['account', 'Circle', 'user']] as const).map(([id, label, icon]) =>
+      {([['home', 'Home', 'home'], ['discover', 'Discover', 'search'], ['request', 'Request', 'plus'], ['bookings', 'Bookings', 'calendar'], ['account', 'Profile', 'user']] as const).map(([id, label, icon]) =>
         <Pressable key={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: activeTab === id }} onPress={() => reset({ screen: id })} style={{ flex: 1, maxWidth: 160, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 5 }}><View style={{ backgroundColor: activeTab === id ? colors.selected : 'transparent', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 }}><Icon name={icon} color={activeTab === id ? colors.accent : colors.muted} /></View><Text style={{ fontSize: 10, color: activeTab === id ? colors.accent : colors.muted, fontWeight: '500' }}>{label}</Text></Pressable>)}
     </View>
   </View>;

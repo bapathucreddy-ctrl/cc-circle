@@ -1,3 +1,4 @@
+import { MapPlaceSearch } from './MapPlaceSearch';
 import { useState } from 'react';
 import { Modal, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +18,7 @@ export function MapLocationField({ center, onChooseLocation, label = 'Choose ser
     <Button title={label} secondary icon="pin" onPress={() => { setDraft(center); setOpen(true); }} />
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}><SafeAreaView style={{ flex: 1, backgroundColor: colors.panel }}>
       <MapExperience title="Confirm location" map={{ center: draft, centerIsLocation: true, onChooseLocation: setDraft }}
-        top={<View style={{ alignItems: 'flex-start' }}><IconButton name="close" label="Close map without changes" onPress={() => setOpen(false)} /></View>}
+        top={<View style={{ gap:8 }}><IconButton name="close" label="Close map without changes" onPress={() => setOpen(false)} /><MapPlaceSearch center={draft} onSelect={point=>setDraft(point)} /></View>}
         footer={<Button title="Use this location" onPress={() => { onChooseLocation(draft); setOpen(false); }} />}>
         <Text style={styles.text}>Tap the map to place your pin.</Text>
         <Text style={styles.muted}>{draft[1].toFixed(5)}, {draft[0].toFixed(5)}</Text>

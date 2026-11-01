@@ -32,23 +32,25 @@ serveRequest(async req => {
     }
     if (action === 'verification' || action === 'avatar' || action === 'presentation') {
       const owner = uuid(input.professional_id);
-      const { data: profile, error: profileError } = await admin.from('professionals').select('is_published').eq('id', owner).maybeSingle();
+      const { data: profile, error: profileError } = await admin.from('professionals').select('is_published,verified_at').eq('id', owner).maybeSingle();
       if (profileError) throw new HttpError(503, 'Unable to check Instagram connection.');
       if (owner !== user.id && !profile?.is_published) throw new HttpError(404, 'Professional not found.');
       let src: string | null = null;
       if (action === 'avatar' || action === 'presentation') {
-        const { data: photo, error } = await admin.from('professional_photos').select('storage_path').eq('professional_id', owner).maybeSingle();
+        const { data: photo, error } = await admin.from('professional_photos').select('storage_path,review_status').eq('professional_id', owner).maybeSingle();
         if (error) throw new HttpError(503, 'Unable to load profile photo.');
-        if (photo) {
+        if (photo && (owner===user.id || photo.review_status==='approved')) {
           const { data, error: urlError } = await admin.storage.from(bucket).createSignedUrl(photo.storage_path, 3600);
           if (urlError) throw new HttpError(503, 'Unable to load profile photo.');
           src = data?.signedUrl || null;
         }
-        if (action === 'avatar') return json({ src });
+        if (action === 'avatar') return json({ src,review_status:owner===user.id?photo?.review_status:undefined });
       }
-      const { data, error } = await admin.from('portfolio_connections').select('expires_at').eq('professional_id', owner).eq('provider', 'instagram').maybeSingle();
-      if (error) throw new HttpError(503, 'Unable to check Instagram connection.');
-      return json({ verified: Boolean(data && new Date(data.expires_at).getTime() > Date.now()), ...(action === 'presentation' ? { src } : {}) });
+      const { data: verified, error: approvalError } = await admin.rpc('professional_approval_status', { p_id: owner });
+      if (approvalError) throw new HttpError(503, 'Unable to check profile approval.');
+      const { data: connection, error: connectionError } = await admin.from('portfolio_connections').select('expires_at').eq('professional_id', owner).eq('provider', 'instagram').maybeSingle();
+      if (connectionError) throw new HttpError(503, 'Unable to check Instagram connection.');
+      return json({ verified: verified === true, instagram_connected: Boolean(connection && new Date(connection.expires_at).getTime() > Date.now()), ...(action === 'presentation' ? { src } : {}) });
     }
     if (action === 'sync') throw new HttpError(400, 'Instagram verifies your account. Upload work samples separately.');
     if (action === 'disconnect') {
@@ -91,7 +93,7 @@ serveRequest(async req => {
         throw new HttpError(400, 'This file does not match a supported photo.');
       }
       const bytes = new Uint8Array(await uploaded.arrayBuffer());
-      try { await reviewPortfolioImage(bytes); } catch (error) {
+      try { await reviewPortfolioImage(bytes,action==='set_avatar'); } catch (error) {
         if (error instanceof HttpError && error.status === 422) await admin.storage.from(bucket).remove([path]);
         throw error;
       }
@@ -101,7 +103,7 @@ serveRequest(async req => {
       if (copyError) throw new HttpError(500, 'Unable to save this photo. Please try again.');
       if (action === 'set_avatar') {
         const { data: previous } = await admin.from('professional_photos').select('storage_path').eq('professional_id', user.id).maybeSingle();
-        const { error } = await admin.from('professional_photos').upsert({ professional_id: user.id, storage_path: approvedPath, updated_at: new Date().toISOString() });
+        const { error } = await admin.from('professional_photos').upsert({ professional_id: user.id, storage_path: approvedPath, updated_at: new Date().toISOString(),review_status:'pending' });
         await admin.storage.from(bucket).remove([path]);
         if (error) { await admin.storage.from(bucket).remove([approvedPath]); throw new HttpError(500, 'Unable to save profile photo.'); }
         if (previous?.storage_path && previous.storage_path !== approvedPath) await admin.storage.from(bucket).remove([previous.storage_path]);

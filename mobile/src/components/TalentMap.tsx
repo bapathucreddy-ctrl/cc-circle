@@ -5,7 +5,7 @@ import {categoryLabels,type Coordinate,type Professional} from '../domain';
 import {useTheme} from '../ui';
 import {MapControls,MapHeader} from './MapControls';
 import type {TalentMapProps} from './TalentMap.types';
-import {destinationImage,trackingRiderImages,genericTrackingRiderImage} from './mapArtwork';
+import {destinationImage,trackingRiderImages,genericTrackingRiderImage,craftIconImages,genericCraftImage} from './mapArtwork';
 import {useTrackingPoint} from './useTrackingPoint';
 import {useNavigationHeading} from './useNavigationHeading';
 import {riderRotation} from '../lib/navigationHeading';
@@ -15,7 +15,7 @@ import {navigationPresentation as nav} from '../lib/navigationPresentation';
 import {standardMapStyle,standardMapConfig,mapRouteColor,type MapLightPreset} from '../lib/mapStyle';
 const token=process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 if(token)Mapbox.setAccessToken(token);
-export function TalentMap({center:rawCenter,professionals=[],destination,heading:reportedHeading,tracking=false,trackingCategory,centerIsLocation=true,route,onSelect,onChooseLocation,height=300,label,status,distanceLabel,immersive=false,overlayBottom=0,overlayTop=0,cameraOverlayBottom=overlayBottom,selectedProfessionalId}:TalentMapProps){
+export function TalentMap({center:rawCenter,professionals=[],destination,heading:reportedHeading,tracking=false,travelling=tracking,trackingCategory,centerIsLocation=true,route,onSelect,onChooseLocation,height=300,label,status,distanceLabel,immersive=false,overlayBottom=0,overlayTop=0,cameraOverlayBottom=overlayBottom,selectedProfessionalId}:TalentMapProps){
  const pose=useMemo(()=>routePose(rawCenter,tracking?route:undefined),[rawCenter[0],rawCenter[1],route,tracking]);const center=tracking?pose.point:rawCenter;
  const {colors,mode}=useTheme();const camera=useRef<Mapbox.Camera>(null);const moving=useTrackingPoint(center,tracking);
  const journeyHeading=useNavigationHeading(center,pose.heading??reportedHeading,route);const heading=tracking?journeyHeading:0;
@@ -38,9 +38,9 @@ export function TalentMap({center:rawCenter,professionals=[],destination,heading
    <Mapbox.StyleImport id="basemap" existing config={standardMapConfig(lightPreset)}/>
    {route&&route.length>1&&<Mapbox.ShapeSource id="booking-route" shape={{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:route}}}><Mapbox.LineLayer id="route-line" slot="middle" style={{lineColor:mapRouteColor(lightPreset),lineWidth:5,lineCap:'round',lineJoin:'round'}}/></Mapbox.ShapeSource>}
    <Mapbox.MarkerView id="map-center" coordinate={moving} anchor={tracking?{x:.5,y:1}:undefined} allowOverlap>
-    {tracking?<View accessible accessibilityLabel={trackingCategory?categoryLabels[trackingCategory]+' travelling along the route':'Professional travelling along the route'} style={{width:aerial?nav.aerialRiderWidth:nav.riderWidth,height:aerial?nav.aerialRiderHeight:nav.riderHeight,transform:[{translateY:aerial?nav.aerialRiderOffset:nav.riderOffset}]}}>
-     <Image source={trackingCategory?trackingRiderImages[trackingCategory]:genericTrackingRiderImage} style={{width:'100%',height:'100%'}} resizeMode="contain" resizeMethod="resize"/>
-     {aerial&&<View testID="aerial-travel-direction" style={{position:'absolute',bottom:0,left:'50%',width:0,height:0,borderLeftWidth:6,borderRightWidth:6,borderBottomWidth:12,borderLeftColor:'transparent',borderRightColor:'transparent',borderBottomColor:colors.text,transform:[{translateX:-6},{rotate:riderRotation(heading,mapBearing)+'deg'}]}}/>}
+    {tracking?<View accessible accessibilityLabel={travelling?(trackingCategory?categoryLabels[trackingCategory]+' travelling along the route':'Professional travelling along the route'):(trackingCategory?categoryLabels[trackingCategory]+' at the service location':'Professional at the service location')} style={{width:travelling?(aerial?nav.aerialRiderWidth:nav.riderWidth):64,height:travelling?(aerial?nav.aerialRiderHeight:nav.riderHeight):64,transform:[{translateY:travelling?(aerial?nav.aerialRiderOffset:nav.riderOffset):0}]}}>
+     <Image source={travelling ? (trackingCategory?trackingRiderImages[trackingCategory]:genericTrackingRiderImage) : (trackingCategory?craftIconImages[trackingCategory]:genericCraftImage)} style={{width:'100%',height:'100%'}} resizeMode="contain" resizeMethod="resize"/>
+     {travelling&&aerial&&<View testID="aerial-travel-direction" style={{position:'absolute',bottom:0,left:'50%',width:0,height:0,borderLeftWidth:6,borderRightWidth:6,borderBottomWidth:12,borderLeftColor:'transparent',borderRightColor:'transparent',borderBottomColor:colors.text,transform:[{translateX:-6},{rotate:riderRotation(heading,mapBearing)+'deg'}]}}/>}
     </View>:centerIsLocation?<Image source={destinationImage} accessibilityLabel="Current service location" style={{width:58,height:58}} resizeMode="contain"/>:<View style={{width:18,height:18,borderRadius:9,backgroundColor:colors.accent,borderWidth:2,borderColor:colors.panel}}/>}
    </Mapbox.MarkerView>
    {destination&&<Mapbox.MarkerView id="destination" coordinate={destination} allowOverlap><Image source={destinationImage} accessibilityLabel="Service destination" style={{width:58,height:58}} resizeMode="contain"/></Mapbox.MarkerView>}
@@ -54,5 +54,5 @@ export function TalentMap({center:rawCenter,professionals=[],destination,heading
 
 function ProfessionalPin({person,onSelect,selected=false}:{person:Professional;selected?:boolean;onSelect:TalentMapProps['onSelect']}){
  const {colors,mode}=useTheme();const point=useTrackingPoint([person.longitude,person.latitude],true);
- return <Mapbox.MarkerView id={person.id} coordinate={point} allowOverlap><Pressable accessibilityRole="button" accessibilityLabel={'View '+person.display_name+', '+categoryLabels[person.category]} onPress={()=>onSelect?.(person)} style={{padding:4,borderRadius:16,borderWidth:selected?3:1,borderColor:selected?colors.text:colors.line,backgroundColor:mode==='dark'?'#eeeeee':colors.panel}}><Image source={trackingRiderImages[person.category]} style={{width:48,height:72}} resizeMode="contain" resizeMethod="resize"/></Pressable></Mapbox.MarkerView>;
+ return <Mapbox.MarkerView id={person.id} coordinate={point} allowOverlap><Pressable accessibilityRole="button" accessibilityLabel={'View '+person.display_name+', '+categoryLabels[person.category]+', '+(person.available_now?'online':person.availability_status==='busy'?'busy':'offline, approximate area')} onPress={()=>onSelect?.(person)} style={{padding:4,borderRadius:16,borderWidth:selected?3:1,borderColor:selected?colors.text:colors.line,backgroundColor:mode==='dark'?'#eeeeee':colors.panel}}><Image source={craftIconImages[person.category]} style={{width:48,height:48,opacity:person.available_now?1:.55}} resizeMode="contain" resizeMethod="resize"/><Text style={{fontSize:9,color:'#111',textAlign:'center',fontWeight:'600'}}>{person.available_now?'Online':person.availability_status==='busy'?'Busy':'Offline'}</Text></Pressable></Mapbox.MarkerView>;
 }

@@ -35,3 +35,22 @@ test('customer galleries expose only server-approved uploaded images, retaining 
  moduleAt('../../supabase/functions/portfolio/index.ts',name=>name.endsWith('/http.ts')?{serveRequest:fn=>{handler=fn;}}:name.endsWith('/payments.ts')?{authenticate:async()=>({admin,user:{id:'customer'}}),body:async()=>({action:'list',professional_id:owner}),uuid:value=>value,HttpError,json:Response.json.bind(Response)}:{},{Response});
  const response=await handler(new Request('https://portfolio.test',{method:'POST'}));const data=await response.json();assert.equal(response.status,200);assert.equal(data.media.length,1);assert.equal(data.media[0].id,'approved');assert.equal(data.media[0].needsReview,false);assert.deepEqual(signed,[owner+'/approved-fixture.jpg']);assert.deepEqual(data.connections,[]);
 });
+
+test('portrait checks require exactly one confident face and reject wedding, group, illustration and branded images',async()=>{
+ const r=review(()=>{throw new Error('not used');});const face={detectionConfidence:.99};
+ for(const data of [{},{faceAnnotations:[]},{faceAnnotations:[face,face]},{faceAnnotations:[{}]},{faceAnnotations:[{detectionConfidence:.5}]},{faceAnnotations:[face],labelAnnotations:[{description:'Wedding dress',score:.95}]},{faceAnnotations:[face],labelAnnotations:[{description:'Cartoon',score:.95}]},{faceAnnotations:[face],logoAnnotations:[{score:.98}]}])assert.equal(r.profilePhotoDecision(data),'reject');
+ assert.equal(r.profilePhotoDecision({faceAnnotations:[face],labelAnnotations:[{description:'Portrait',score:.99}]}),'review','A detected face still requires human authenticity review');
+});
+test('portrait upload requests face and scene detection while portfolio uploads retain their existing checks',async()=>{
+ let features;const r=review(async(url,init)=>{features=JSON.parse(init.body).requests[0].features.map(row=>row.type);return new Response(JSON.stringify({responses:[{faceAnnotations:[{detectionConfidence:.99}]}]}));});
+ await r.reviewPortfolioImage(new Uint8Array([1]),true);assert.ok(features.includes('FACE_DETECTION'));assert.ok(features.includes('LABEL_DETECTION'));
+});
+
+test('pending and rejected portraits stay private; only approved portraits are signed for other users',async()=>{
+ for(const status of ['pending','rejected','approved'])for(const ownerView of [false,true]){
+ let handler;const signed=[];const owner='10000000-0000-4000-8000-000000000001';
+ const admin={rpc:async()=>({data:true,error:null}),from(table){const q={select(){return q;},eq(){return q;},async maybeSingle(){return{data:table==='professionals'?{is_published:true}:{storage_path:owner+'/approved-portrait.jpg',review_status:status},error:null};}};return q;},storage:{from(){return{async createSignedUrl(path){signed.push(path);return{data:{signedUrl:'https://photo.example/signed'}};}};}}};
+ moduleAt('../../supabase/functions/portfolio/index.ts',name=>name.endsWith('/http.ts')?{serveRequest:fn=>{handler=fn;}}:name.endsWith('/payments.ts')?{authenticate:async()=>({admin,user:{id:ownerView?owner:'customer'}}),body:async()=>({action:'avatar',professional_id:owner}),uuid:value=>value,HttpError,json:Response.json.bind(Response)}:{},{Response});
+ const response=await handler(new Request('https://portfolio.test',{method:'POST'}));const data=await response.json();assert.equal(response.status,200);assert.equal(Boolean(data.src),ownerView||status==='approved');assert.equal(signed.length,ownerView||status==='approved'?1:0);
+ }
+});

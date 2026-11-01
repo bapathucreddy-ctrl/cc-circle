@@ -1,0 +1,10 @@
+const check=r=>{if(r.error)throw r.error;return r.data;};
+const el=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
+export function userDirectory(db){
+ const $=id=>document.getElementById(id);let version=0,offset=0,kind='all',timer;
+ async function refresh(){const v=++version;$('users-notice').textContent='Loading users…';try{const data=check(await db.rpc('admin_user_directory',{p_search:$('users-search').value.trim(),p_kind:kind,p_offset:offset}));const paths=data.users.map(u=>u.avatar_path).filter(Boolean);const photos=paths.length?check(await db.storage.from('portfolio-work').createSignedUrls(paths,3600)):[];if(v!==version)return;$('users-list').replaceChildren();$('users-count').textContent=data.total+' users';for(const u of data.users){const card=el('article','','directory-card panel'),avatar=el('span',u.name.slice(0,1).toUpperCase(),'list-avatar'),photo=photos.find(p=>p.path===u.avatar_path)?.signedUrl;if(photo){avatar.textContent='';const img=el('img');img.src=photo;img.alt='';avatar.append(img);}const info=el('div','','directory-person');info.append(el('strong',u.name),el('p',u.email||'No email'),el('span',u.talent?'Talent':'Customer','review-state'));card.append(avatar,info);$('users-list').append(card);}if(!data.users.length)$('users-list').append(el('p','No users match your search.','profile-empty'));$('users-prev').disabled=offset===0;$('users-next').disabled=offset+50>=data.total;$('users-notice').textContent='';}catch(e){if(v===version)$('users-notice').textContent=e.message;}}
+ $('users-search').oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>{offset=0;void refresh();},250);};
+ for(const value of ['all','customers','talent'])$('users-'+value).onclick=()=>{kind=value;offset=0;for(const k of ['all','customers','talent'])$('users-'+k).setAttribute('aria-pressed',String(k===value));void refresh();};
+ $('users-prev').onclick=()=>{offset=Math.max(0,offset-50);void refresh();};$('users-next').onclick=()=>{offset+=50;void refresh();};
+ return{refresh,reset(){version++;clearTimeout(timer);$('users-list').replaceChildren();}};
+}

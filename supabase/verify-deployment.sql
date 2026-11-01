@@ -24,6 +24,15 @@ begin
       raise exception 'Deployment incomplete: migration % is missing.', expected_version;
     end if;
   end loop;
+  if to_regclass('private.professional_reviews') is null
+    or to_regclass('private.professional_review_history') is null
+    or has_table_privilege('authenticated','private.professional_reviews','SELECT')
+    or has_table_privilege('authenticated','private.professional_review_history','SELECT')
+    or has_function_privilege('anon','public.admin_list_professionals(integer,text)','EXECUTE')
+    or has_function_privilege('anon','public.review_professional(uuid,text,text,timestamptz,text)','EXECUTE')
+    or has_function_privilege('authenticated','public.professional_approval_status(uuid)','EXECUTE') then
+    raise exception 'Deployment incomplete: professional approval access protection is missing.';
+  end if;
   if to_regclass('private.banner_admins') is null or
     has_table_privilege('authenticated','private.banner_admins','SELECT') or
     has_function_privilege('authenticated','public.grant_banner_admin(text)','EXECUTE') or
@@ -33,8 +42,8 @@ begin
   if has_table_privilege('authenticated','private.professional_usernames','SELECT')
     or has_function_privilege('authenticated','private.professional_username(uuid)','EXECUTE')
     or has_function_privilege('anon','public.professional_review_page(uuid,integer,integer)','EXECUTE')
-    or exists(select 1 from public.professionals p left join private.professional_usernames u on u.user_id=p.id where u.username is null or p.display_name<>u.username) then
-    raise exception 'Deployment incomplete: public username or review privacy protection is missing.';
+    or exists(select 1 from public.professionals p where p.display_name is distinct from private.professional_username(p.id)) then
+    raise exception 'Deployment incomplete: public first-name or review privacy protection is missing.';
   end if;
   if to_regprocedure('public.activate_app_session(text)') is null
     or to_regprocedure('public.app_session_allowed(uuid,uuid)') is null then

@@ -20,8 +20,8 @@ export async function firebaseAccessToken(account: ServiceAccount) {
   cached = { token: body.access_token, expiresAt: Date.now() + Math.min(Number(body.expires_in) || 3600, 3600) * 1000 };
   return cached.token;
 }
-export function firebaseMessage(token: string, notificationId: string, title: string) {
-  return { message: { token, notification: { title: `Circle · ${title}`, body: 'Open Circle for the latest update.' }, data: { notification_id: notificationId }, android: { priority: 'high', ttl: '3600s', notification: { channel_id: 'circle-activity', tag: notificationId, visibility: 'PRIVATE', default_sound: true } } } };
+export function firebaseMessage(token: string, notificationId: string, title: string, promotionBody?: string) {
+  return { message: { token, notification: { title: title==='Artist House' ? title : `Artist House · ${title}`, body: promotionBody || 'Open Artist House for the latest update.' }, data: { notification_id: notificationId }, android: { priority: promotionBody ? 'normal' : 'high', ttl: promotionBody ? '2700s' : '3600s', notification: { channel_id: promotionBody ? 'artist-house-promotions' : 'circle-activity', tag: notificationId, visibility: 'PRIVATE', default_sound: !promotionBody } } } };
 }
 export function firebaseResult(status: number, body: { error?: { details?: { errorCode?: string }[] } }): 'sent' | 'invalid' | 'retry' | 'failed' {
   if (status >= 200 && status < 300) return 'sent';

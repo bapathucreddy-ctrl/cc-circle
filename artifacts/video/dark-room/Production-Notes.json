@@ -1,0 +1,34 @@
+{
+  "kind": "AI-assisted BTS recreation, not actual phone camera footage",
+  "imageTool": "Built-in imagegen",
+  "roomPrompt": "Portrait candid low-light phone photo of a real desktop monitor and desk in a dark home office, blank front-facing screen for accurate code/app compositing, no captions or logos.",
+  "screen": "Controlled executable configuration demonstration with actual Circle artwork; not production hot reload or Apple Simulator.",
+  "format": "1080x1920 H.264 MP4, 30fps, silent",
+  "addedCaptions": false,
+  "clips": [
+    {
+      "file": "01-Visual-Discovery-Dark-Room.mp4",
+      "bytes": 1361134,
+      "seconds": 15,
+      "codeExecuted": true,
+      "changeAtSeconds": 7.3,
+      "decodePassed": true
+    },
+    {
+      "file": "02-Dark-Mode-Dark-Room.mp4",
+      "bytes": 1401999,
+      "seconds": 15,
+      "codeExecuted": true,
+      "changeAtSeconds": 7.3,
+      "decodePassed": true
+    },
+    {
+      "file": "03-Festive-Picks-Dark-Room.mp4",
+      "bytes": 1404128,
+      "seconds": 15,
+      "codeExecuted": true,
+      "changeAtSeconds": 7.3,
+      "decodePassed": true
+    }
+  ]
+}

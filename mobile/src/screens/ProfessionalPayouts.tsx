@@ -16,13 +16,18 @@ export function ProfessionalPayouts({ userId }: { userId: string }) {
   useForegroundRefresh(result.refresh, 30000);
   const [history, setHistory] = useState('transfers'), [limit, setLimit] = useState(20);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
+  const [editingBank, setEditingBank] = useState(false);
   const [accountName, setAccountName] = useState(''), [accountNumber, setAccountNumber] = useState(''), [ifsc, setIfsc] = useState('');
   async function register() {
     setBusy(true); setError('');
     try {
       const { error } = await supabase.functions.invoke('cashfree-beneficiary', { body: { account_name: accountName.trim(), account_number: accountNumber.trim(), ifsc: ifsc.trim().toUpperCase() } });
-      if (error) throw new Error('Unable to connect bank account. Check your details and try again.');
-      setAccountName(''); setAccountNumber(''); setIfsc(''); await result.refresh();
+      if (error) {
+        let message='Unable to connect bank account. Check your details and try again.';
+        try { const detail=await error.context?.json(); if(typeof detail?.error==='string')message=detail.error; } catch { /* Keep the safe fallback. */ }
+        throw new Error(message);
+      }
+      setAccountName(''); setAccountNumber(''); setIfsc(''); setEditingBank(false); await result.refresh();
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   const data = result.data;
@@ -41,15 +46,18 @@ export function ProfessionalPayouts({ userId }: { userId: string }) {
           <View style={{ flex: 1, gap: 4 }}><Text style={styles.muted}>Awaiting payout</Text><Text style={styles.heading}>{money(data.summary.outstanding)}</Text></View>
         </View>
         <Text style={[styles.muted, { fontSize: 12 }]}>Net earnings from completed, paid services.</Text>
+        <Text style={[styles.muted, { fontSize: 12 }]}>Payouts become eligible 24 hours after completion and verified payment. Bank processing may take longer.</Text>
         {data.summary.processing > 0 && <Text style={styles.muted}>{money(data.summary.processing)} processing</Text>}
         {data.summary.failed > 0 && <Notice message={`${money(data.summary.failed)} in failed payouts. Contact support@cclabs.space.`} />}
       </Card>
       <Card><Text style={styles.heading}>Bank account</Text>
-        {data.registered ? <Text style={styles.muted}>Connected</Text> : <>
+        {data.registered && !editingBank ? <><Text style={styles.muted}>{data.bankAccount?.account_last4 ? `Bank account ending ${data.bankAccount.account_last4}` : 'Connected'}{data.bankAccount?.bank_ifsc ? ` · ${data.bankAccount.bank_ifsc}` : ''}</Text><Button title="Update bank account" secondary onPress={()=>setEditingBank(true)}/></> : <>
           <Field label="Account holder name" value={accountName} onChange={setAccountName} />
           <Field label="Account number" value={accountNumber} onChange={setAccountNumber} numeric secure />
           <Field label="IFSC" value={ifsc} onChange={setIfsc} />
-          <Button title="Connect bank account" onPress={register} busy={busy} disabled={!accountName.trim() || !accountNumber.trim() || !ifsc.trim()} />
+          <Text style={[styles.muted,{fontSize:12}]}>Details are sent securely to Cashfree. Transfers already submitted keep their original bank account.</Text>
+          <Button title={data.registered ? 'Save bank account' : 'Connect bank account'} onPress={register} busy={busy} disabled={!accountName.trim() || !accountNumber.trim() || !ifsc.trim()} />
+          {data.registered && <Button title="Cancel" secondary disabled={busy} onPress={()=>{setEditingBank(false);setAccountName('');setAccountNumber('');setIfsc('');}}/>}
         </>}
       </Card>
       <Segmented options={[{ id: 'transfers', label: 'Payout history' }, { id: 'earnings', label: 'Earnings history' }]} value={history} onChange={value => { setHistory(value); setLimit(20); }} />
@@ -58,6 +66,7 @@ export function ProfessionalPayouts({ userId }: { userId: string }) {
           <View style={styles.between}><Text style={styles.heading}>{money(transfer.amount_paise)}</Text><Text style={styles.muted}>{statusLabels[transfer.status]}</Text></View>
           <Text style={styles.text}>{data.services.find(service => service.id === transfer.booking_id)?.service_name || 'Service payout'}</Text>
           <Text style={styles.muted}>Requested {date(transfer.created_at)}</Text>
+          {transfer.status==='pending' && transfer.available_at && <Text style={styles.muted}>Eligible {new Date(transfer.available_at).toLocaleString()}</Text>}
           <Text selectable style={[styles.muted, { fontSize: 11 }]}>Ref: {transfer.transfer_id}</Text>
         </Card>)}
         {!data.transfers.length && <EmptyState title="No payouts yet" message="Transfers will appear here." icon="wallet" />}

@@ -1,6 +1,14 @@
-export function adminAuthStorage(session, local) {
-  const target = key => key.endsWith('-code-verifier') ? local : session;
-  return {getItem:key=>target(key).getItem(key),setItem:(key,value)=>target(key).setItem(key,value),removeItem:key=>target(key).removeItem(key)};
+export function adminAuthStorage(session, local, persistent = local) {
+  return {
+    getItem(key) {
+      const saved=persistent.getItem(key);if(saved!==null)return saved;
+      const previous=session.getItem(key)??local.getItem(key);
+      if(previous!==null){persistent.setItem(key,previous);session.removeItem(key);if(persistent!==local)local.removeItem(key);}
+      return previous;
+    },
+    setItem(key,value){persistent.setItem(key,value);session.removeItem(key);if(persistent!==local)local.removeItem(key);},
+    removeItem(key){persistent.removeItem(key);session.removeItem(key);local.removeItem(key);},
+  };
 }
 export function nativeAuthCode(value) {
   const url=new URL(value);

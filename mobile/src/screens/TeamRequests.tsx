@@ -136,33 +136,26 @@ function EventSummary({ event }: { event: team.TeamEvent }) {
 function Applicants({ event, onBooking, onProfile, onChanged }: { event: team.TeamEvent; onBooking: CustomerProps['onBooking']; onProfile: CustomerProps['onProfile']; onChanged: () => Promise<void> }) {
   const { styles } = useTheme();
   const result = useResource(() => team.teamApplicants(event.id), event.id); useForegroundRefresh(result.refresh);
-  const [busy, setBusy] = useState<string | null>(null); const [error, setError] = useState(''); const [confirm, setConfirm] = useState<string | null>(null);
-  async function act(applicant: team.TeamApplicant, action: 'accept' | 'booking' | 'profile') {
+  const [busy, setBusy] = useState<string | null>(null); const [error, setError] = useState('');
+  async function act(applicant: team.TeamApplicant, action: 'booking' | 'profile') {
     setBusy(applicant.id); setError('');
     try {
       if (action === 'profile') {
         const { data, error } = await supabase.from('professionals').select('*').eq('id', applicant.professional_id).single();
         if (error) throw error; onProfile(data as Professional);
       } else if (action === 'booking' && applicant.booking_id) onBooking(await team.teamBooking(applicant.booking_id));
-      else { await team.acceptTeamApplicant(applicant); setConfirm(null); await result.refresh(); await onChanged(); }
     } catch (e) { setError(errorText(e)); } finally { setBusy(null); }
   }
   return <><Text style={styles.heading}>Professional applications ({result.data?.length || 0})</Text><Notice message={error || result.error} />
     {result.loading && !result.data && <ActivityIndicator />}
     {!result.loading && !result.data?.length && <Text style={styles.muted}>Matching professionals can raise a request for your event. Applications will appear here.</Text>}
     {result.data?.map(applicant => {
-      const filled = (event.roles.find(role => role.category === applicant.category)?.selected || 0) >= (event.roles.find(role => role.category === applicant.category)?.quantity || 0);
       return <Card key={applicant.id}><Text style={styles.heading}>{applicant.professional_name}</Text><Text style={styles.muted}>{categoryLabels[applicant.category]} · {applicant.city}</Text>
         <Text style={styles.text}>{applicant.bio}</Text><Text style={styles.heading}>{event.billing_mode==='hourly'?'Hourly service rate':'General charge'}: {money(applicant.total_paise)}{event.billing_mode==='hourly'?' / hour':''}</Text>
         <Text style={styles.muted}>{applicant.service_name} · {applicant.duration_minutes} minutes · {event.billing_mode==='hourly'?'planned coverage; booking fee added once at completion':'includes platform fees'}</Text>
         {Boolean(applicant.message) && <Text style={styles.text}>{applicant.message}</Text>}
         <TextButton title="View work & full profile" onPress={() => { void act(applicant, 'profile'); }} disabled={busy !== null} />
-        {applicant.booking_id ? <><Text style={styles.muted}>Booking {applicant.booking_status?.replace('_', ' ')}</Text><Button title="Open booking" onPress={() => { void act(applicant, 'booking'); }} busy={busy === applicant.id} disabled={busy !== null} /></> : confirm === applicant.id ? <>
-          <Text style={styles.text}>Confirm {applicant.professional_name} for {event.title} at {money(applicant.total_paise)}{event.billing_mode==='hourly'?' per hour? Actual hours round up after OTP verification. A booking fee is added once. Pay after service.':'? Pay from the booking before the journey.'}</Text>
-          <Button title="Confirm professional" onPress={() => { void act(applicant, 'accept'); }} busy={busy === applicant.id} disabled={busy !== null || filled} />
-          <TextButton title="Keep reviewing" onPress={() => setConfirm(null)} disabled={busy !== null} />
-        </> : <Button title={filled ? 'Requested headcount filled' : 'Accept professional'} disabled={filled || busy !== null || new Date(event.starts_at).getTime() <= Date.now()} onPress={() => setConfirm(applicant.id)} />}
-      </Card>;
+        {applicant.booking_id ? <><Text style={styles.muted}>Booking {applicant.booking_status?.replace('_', ' ')}</Text><Button title="Open booking" onPress={() => { void act(applicant, 'booking'); }} busy={busy === applicant.id} disabled={busy !== null} /></> : <Text style={styles.muted}>{applicant.review_status==='rejected'?'Admin rejected this response':'Professional accepted · awaiting admin approval'}</Text>}      </Card>;
     })}
   </>;
 }
@@ -172,7 +165,7 @@ export function ProfessionalTeamRequests({ userId, onBooking }: { userId: string
   const result = useResource(team.teamEvents, userId); useForegroundRefresh(result.refresh);
   const ownServices = useResource(() => services(userId), userId);
   return <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={result.loading} onRefresh={() => { void result.refresh(); void ownServices.refresh(); }} />}>
-    <Text style={styles.title}>Events need your craft.</Text><Text style={styles.muted}>Apply with one of your services. The customer reviews your work and charges before choosing their team. Applying does not reserve your availability.</Text>
+    <Text style={styles.title}>Events need your craft.</Text><Text style={styles.muted}>Apply with one of your services. Accept a request with your service and quote. Admin approval is required before it is confirmed.</Text>
     <Notice message={result.error || ownServices.error} />
     {!result.loading && !result.data?.filter(event => !event.is_owner).length && <Text style={styles.text}>Matching event requests will appear here after you publish your professional profile.</Text>}
     {result.data?.filter(event => !event.is_owner).map(event => <ProfessionalApplication key={event.id} event={event} services={ownServices.data || []} onChanged={result.refresh} onBooking={onBooking} />)}
@@ -183,25 +176,26 @@ function ProfessionalApplication({ event, services: offered, onChanged, onBookin
   const { styles, colors } = useTheme();
   const [selectedService, setSelectedService] = useState('');const [hourlyRate,setHourlyRate]=useState(''); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const service = offered.find(item => item.id === selectedService) || offered[0];
-  async function act(action: 'apply' | 'withdraw' | 'booking') {
+  async function act(action: 'apply' | 'withdraw' | 'booking' | 'reject') {
     setBusy(true); setError('');
     try {
-      if (action === 'apply' && service){if(event.billing_mode==='hourly'&&(!Number.isInteger(Number(hourlyRate))||Number(hourlyRate)<100||Number(hourlyRate)>1000000))throw new Error('Enter your whole-rupee net hourly rate from 100 to 1000000.');await team.applyToTeam(event.id, service.id, message,event.billing_mode==='hourly'?Number(hourlyRate)*100:undefined);}
+      if(action==='reject')await team.rejectTeamEvent(event.id);
+      else if (action === 'apply' && service){if(event.billing_mode==='hourly'&&(!Number.isInteger(Number(hourlyRate))||Number(hourlyRate)<100||Number(hourlyRate)>1000000))throw new Error('Enter your whole-rupee net hourly rate from 100 to 1000000.');await team.applyToTeam(event.id, service.id, message,event.billing_mode==='hourly'?Number(hourlyRate)*100:undefined);}
       else if (action === 'withdraw') await team.withdrawTeamApplication(event.id);
       else if (event.my_application?.booking_id) onBooking(await team.teamBooking(event.my_application.booking_id));
       await onChanged();
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   return <View style={{ gap: 12 }}><EventSummary event={event} /><Card><Notice message={error} />
-    {event.my_application ? <><Text style={styles.heading}>{event.my_application.booking_id ? 'The customer selected you' : 'Your application is submitted'}</Text>
+    {event.declined ? <Text style={styles.muted}>You declined this request.</Text> : event.my_application ? <><Text style={styles.heading}>{event.my_application.booking_id ? 'Confirmed · admin approved' : event.my_application.review_status==='rejected'?'Admin declined this response':'Accepted · awaiting admin approval'}</Text>
       <Text style={styles.text}>{event.my_application.service_name} · You receive {money(event.my_application.net_paise)}{event.billing_mode==='hourly'?' / hour':''}</Text>
-      {event.my_application.booking_id ? <Button title="Open event booking" onPress={() => { void act('booking'); }} busy={busy} /> : <><Text style={styles.muted}>Waiting for the customer to choose their team. To change your service or charges, withdraw and apply again.</Text><Button title="Withdraw application" secondary onPress={() => { void act('withdraw'); }} busy={busy} /></>}
+      {event.my_application.booking_id ? <Button title="Open event booking" onPress={() => { void act('booking'); }} busy={busy} /> : <><Text style={styles.muted}>Your response is with the admin. This is not a confirmed booking. To change your offer, withdraw and respond again.</Text><Button title="Withdraw application" secondary onPress={() => { void act('withdraw'); }} busy={busy} /></>}
     </> : service ? <>
       <Text style={styles.label}>Offer your service</Text><AppearanceSelect label="Service for this event" value={service.id} options={offered.map(item => ({ value: item.id, label: item.name }))} onChange={setSelectedService} colors={colors} />
       <Text style={styles.text}>{event.billing_mode==='hourly'?`${event.planned_hours||8} planned hours reserved; enter your hourly rate below.`:`${service.duration_minutes} minutes · You receive ${money(service.amount_paise)}`}</Text>
       {event.billing_mode==='hourly'&&<><Field label="Your net hourly rate (₹)" value={hourlyRate} onChange={setHourlyRate} numeric placeholder="e.g. 1500"/><Text style={styles.muted}>Your chosen amount per billable hour, after commission. Total earnings depend on verified service time, rounded up to whole hours.</Text></>}
       <Field label="Message to the customer (optional)" value={message} onChange={setMessage} multiline maxLength={1000} placeholder="Explain how your service fits this event." />
-      <Button title="Raise request for this event" onPress={() => { void act('apply'); }} busy={busy} />
+      <Button title="Accept request · send for approval" onPress={() => { void act('apply'); }} busy={busy} /><Button title="Reject request" secondary onPress={()=>{void act('reject');}} disabled={busy} />
     </> : <Text style={styles.muted}>Add an active service to your professional profile to apply.</Text>}
   </Card></View>;
 }

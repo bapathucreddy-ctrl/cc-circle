@@ -1,0 +1,77 @@
+{
+  "format": "H.264 MP4",
+  "fps": 30,
+  "audio": "silent; add music in Instagram",
+  "kind": "Controlled code-to-preview demonstration, using Circle artwork. Not a recording of production hot reload or Apple iOS Simulator.",
+  "executedBeforeAfterCode": true,
+  "reels": [
+    {
+      "part": "01",
+      "file": "01-Visual-Discovery.mp4",
+      "cover": "01-Visual-Discovery-Cover.png",
+      "seconds": 15,
+      "width": 1080,
+      "height": 1920,
+      "before": {
+        "columns": 1,
+        "showImages": false
+      },
+      "after": {
+        "columns": 3,
+        "showImages": true
+      },
+      "typedCharacters": 33,
+      "previewChangesAtSeconds": 7.55,
+      "sha256": "ad700266b80f070e1b15f57f11cb463e97f777b131ee7fc17dfd3a0088ac53f4",
+      "decodePassed": true
+    },
+    {
+      "part": "02",
+      "file": "02-Dark-Mode.mp4",
+      "cover": "02-Dark-Mode-Cover.png",
+      "seconds": 15,
+      "width": 1080,
+      "height": 1920,
+      "before": {
+        "mode": "light",
+        "background": "#FAFAFA",
+        "text": "#171717"
+      },
+      "after": {
+        "mode": "dark",
+        "background": "#101010",
+        "text": "#FFFFFF"
+      },
+      "typedCharacters": 59,
+      "previewChangesAtSeconds": 7.55,
+      "sha256": "47f79a692044232bcc7b13e948f69947da9b4c5eae041d1be387e5707634353d",
+      "decodePassed": true
+    },
+    {
+      "part": "03",
+      "file": "03-Festive-Picks.mp4",
+      "cover": "03-Festive-Picks-Cover.png",
+      "seconds": 15,
+      "width": 1080,
+      "height": 1920,
+      "before": {
+        "professions": [
+          "Makeup"
+        ]
+      },
+      "after": {
+        "professions": [
+          "Makeup",
+          "Photographer",
+          "HairStylist"
+        ]
+      },
+      "typedCharacters": 74,
+      "previewChangesAtSeconds": 7.55,
+      "sha256": "16ca7ccb78121113e371c2af41871f76198e0029a997926c83eb89208e3d544a",
+      "decodePassed": true
+    }
+  ],
+  "allDecodePassed": true,
+  "typingBeforeApply": true
+}

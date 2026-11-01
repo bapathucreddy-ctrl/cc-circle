@@ -1,17 +1,27 @@
 # Circle Android updates
 
-Latest builds: 21 October 2026.
+## Artist House 0.2.0 — 30 October 2026
 
-| App | Version | Size | Download |
+| App | Size | Download |
+| --- | --- | --- |
+| Customer | 56.06 MB | [Artist House Customer](ArtistHouse-Customer-0.2.0.apk) |
+| Professional | 56.06 MB | [Artist House Professional](ArtistHouse-Professional-0.2.0.apk) |
+| Admin | 4.88 MB | [Artist House Admin](ArtistHouse-Admin-0.2.0.apk) |
+
+Install over the matching existing apps. Package IDs and signing keys are unchanged. Includes the new A/door logo, nearby-professional carousel, remotely managed service images/names, editable picks headings and optional scheduled promotions. [Setup and verification](../../docs/artist-house-release.md). Physical-device runtime testing remains unverified.
+
+Customer update, 30 October 2026: [Circle Customer 0.1.16](Circle-Customer-0.1.16.apk), version code 17, 56.07 MB. Includes live admin-managed service names and photos. Package and signing certificate match the prior Customer release. Install over the existing app. Production bundle, native modules, signature and alignment checks passed; physical-device testing remains unverified.
+
+Built 23 October 2026.
+
+| App | Version / code | Size | Download |
 | --- | --- | --- | --- |
-| Customer | 0.1.14 / code 15 | 56.24 MB | [APK](Circle-Customer-0.1.14.apk) |
-| Professional | 0.1.19 / code 20 | 56.07 MB | [APK](Circle-Professional-0.1.19.apk) |
-| Admin | 0.1.0 / code 1 | 0.09 MB | [APK](Circle-Admin-0.1.0.apk) |
+| customer | 0.1.15 / 16 | 56.07 MB | [APK](Circle-Customer-0.1.15.apk) |
+| professional | 0.1.20 / 21 | 56.07 MB | [APK](Circle-Professional-0.1.20.apk) |
+| admin | 0.1.1 / 2 | 0.1 MB | [APK](Circle-Admin-0.1.1.apk) |
 
-These builds retain the existing package IDs and signing keys and update the previous releases. The customer app includes compact map controls, a collapsed nearby list, admin-uploaded banners and configurable multi-profession Festive picks.
+The existing package IDs and signing certificates are preserved, with increased version codes for updates. Customer and Professional show separate gold Instagram connection and monochrome admin approval badges. Admin includes professional profile review, approval/rejection, work/service/review tabs and light/dark mode.
 
-TypeScript and 157 mobile tests passed. Signatures, native modules, original logo, 32-bit and 64-bit ARM support, production bundles and 16 KB alignment were checked. Physical-device installation and runtime testing remain unverified.
+157 mobile tests passed. APK signatures, package identity, release bytecode, source matching, native modules and 16 KB alignment were checked. Physical-device installation and runtime testing were not performed.
 
-[Release validation](../previews/mobile-admin-release-validation.json)
-
-Circle Admin installs separately. Sign in with the approved email `chetan.reddy@cclabs.space`, verify ownership, then upload a banner and select professions/services under **Festive picks**. The selected cards appear in the customer app within 30 seconds while open. It packages the panel and requires no localhost server. Native OAuth and file-picker behavior have not yet been checked on a physical phone.
+[Validation](../previews/approval-apk-release-validation.json)

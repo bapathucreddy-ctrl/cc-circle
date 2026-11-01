@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 export type EarnedService = { id: string; service_name: string; starts_at: string; paid_at: string; service_ended_at?: string | null; talent_payout_paise: number };
-export type PayoutTransfer = { booking_id: string; amount_paise: number; status: 'pending' | 'processing' | 'paid' | 'failed'; transfer_id: string; created_at: string };
+export type PayoutTransfer = { booking_id: string; amount_paise: number; status: 'pending' | 'processing' | 'paid' | 'failed'; transfer_id: string; created_at: string; available_at?: string };
 
 export function payoutSummary(services: EarnedService[], transfers: PayoutTransfer[]) {
   const earned = services.reduce((sum, item) => sum + item.talent_payout_paise, 0);
@@ -28,7 +28,7 @@ export async function professionalPayouts(userId: string) {
   async function transfers() {
     const rows: PayoutTransfer[] = [];
     for (let offset = 0; ; offset += 500) {
-      const { data, error } = await supabase.from('payout_jobs').select('booking_id,amount_paise,status,transfer_id,created_at')
+      const { data, error } = await supabase.from('payout_jobs').select('booking_id,amount_paise,status,transfer_id,created_at,available_at')
         .eq('professional_id', userId).order('created_at', { ascending: false }).order('booking_id').range(offset, offset + 499);
       if (error) throw error;
       if (!data) throw new Error('Unable to load payouts.');
@@ -37,10 +37,10 @@ export async function professionalPayouts(userId: string) {
     }
   }
   async function account() {
-    const { data, error } = await supabase.from('payout_accounts').select('professional_id').eq('professional_id', userId).maybeSingle();
+    const { data, error } = await supabase.from('payout_accounts').select('professional_id,account_last4,bank_ifsc').eq('professional_id', userId).maybeSingle();
     if (error) throw error;
-    return Boolean(data);
+    return data as {professional_id: string; account_last4: string | null; bank_ifsc: string | null} | null;
   }
-  const [earnedServices, payoutTransfers, registered] = await Promise.all([services(), transfers(), account()]);
-  return { services: earnedServices, transfers: payoutTransfers, registered, summary: payoutSummary(earnedServices, payoutTransfers) };
+  const [earnedServices, payoutTransfers, bankAccount] = await Promise.all([services(), transfers(), account()]);
+  return { services: earnedServices, transfers: payoutTransfers, registered: Boolean(bankAccount), bankAccount, summary: payoutSummary(earnedServices, payoutTransfers) };
 }
